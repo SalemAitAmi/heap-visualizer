@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Typography, Chip, IconButton, Tooltip, Button } from '@mui/material';
-import { Info, Close as CloseIcon } from '@mui/icons-material';
+import { Box, Typography, Chip, IconButton, Tooltip } from '@mui/material';
+import { Info } from '@mui/icons-material';
 import * as d3 from 'd3';
 
 const BLOCK_STATES = {
@@ -10,9 +10,9 @@ const BLOCK_STATES = {
 };
 
 const REGION_COLORS = {
-    0: { border: '#6366f1', bg: 'rgba(99,102,241,0.05)' },
-    1: { border: '#ec4899', bg: 'rgba(236,72,153,0.05)' },
-    2: { border: '#3b82f6', bg: 'rgba(59,130,246,0.05)' }
+    0: { border: '#6366f1', bg: 'rgba(99,102,241,0.05)', name: 'FAST', description: 'High-speed cache-friendly memory for frequently accessed data' },
+    1: { border: '#ec4899', bg: 'rgba(236,72,153,0.05)', name: 'DMA', description: 'DMA-capable memory for hardware buffer transfers' },
+    2: { border: '#3b82f6', bg: 'rgba(59,130,246,0.05)', name: 'UNCACHED', description: 'Uncached memory for bulk data storage' }
 };
 
 const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick, resetZoom, onFreeBlock }) => {
@@ -20,6 +20,7 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
     const [dimensions, setDim] = useState({ width: 800, height: 300 });
     const [selectedBlock, setSelectedBlock] = useState(null);
     const tooltipRef = useRef(null);
+    const hoverTooltipRef = useRef(null);
 
     const isHeap5 = blocks.some(b => b.regionId !== undefined && b.regionId > 0);
     
@@ -57,6 +58,10 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
                 tooltipRef.current.remove();
                 tooltipRef.current = null;
             }
+            if (hoverTooltipRef.current) {
+                hoverTooltipRef.current.remove();
+                hoverTooltipRef.current = null;
+            }
         };
     }, []);
 
@@ -67,6 +72,26 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
             tooltipRef.current = null;
         }
     }, [selectedBlock]);
+
+    // Clear selected block when blocks change significantly (e.g., simulation change)
+    useEffect(() => {
+        if (selectedBlock) {
+            // Check if selected block still exists
+            const stillExists = blocks.some(b => 
+                b.offset === selectedBlock.offset && 
+                b.allocationId === selectedBlock.allocationId &&
+                b.regionId === selectedBlock.regionId
+            );
+            if (!stillExists) {
+                setSelectedBlock(null);
+                onBlockClick(null);
+                if (tooltipRef.current) {
+                    tooltipRef.current.remove();
+                    tooltipRef.current = null;
+                }
+            }
+        }
+    }, [blocks, selectedBlock, onBlockClick]);
 
     const formatBytes = (bytes) => {
         if (bytes < 1024) return `${bytes}B`;
@@ -86,6 +111,15 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
         }
     };
 
+    // Method to clear selection externally
+    const clearSelection = () => {
+        setSelectedBlock(null);
+        if (tooltipRef.current) {
+            tooltipRef.current.remove();
+            tooltipRef.current = null;
+        }
+    };
+
     const instructionText = isHeap5
         ? `Each region shown separately. Mouse wheel to zoom, click and drag to pan. Click allocated blocks to select and free them.`
         : `Mouse wheel to zoom, click and drag to pan. Click allocated blocks to select and free them.`;
@@ -93,7 +127,7 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
     return (
         <Box ref={containerRef} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <Typography variant="h6">Memory Layout</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Memory Layout</Typography>
                 <Tooltip title={instructionText} placement="top" arrow>
                     <IconButton size="small" sx={{ color: 'text.secondary' }}>
                         <Info fontSize="small" />
@@ -116,6 +150,7 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
                         selectedBlock={selectedBlock}
                         onBlockClick={handleBlockClick}
                         tooltipRef={tooltipRef}
+                        hoverTooltipRef={hoverTooltipRef}
                         resetZoom={resetZoom}
                         onFreeBlock={onFreeBlock}
                         formatBytes={formatBytes}
@@ -129,6 +164,7 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
                         selectedBlock={selectedBlock}
                         onBlockClick={handleBlockClick}
                         tooltipRef={tooltipRef}
+                        hoverTooltipRef={hoverTooltipRef}
                         resetZoom={resetZoom}
                         onFreeBlock={onFreeBlock}
                         formatBytes={formatBytes}
@@ -136,7 +172,18 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
                 )}
             </Box>
 
-            <Box display="flex" gap={1} mt={1.5} pt={1.5} borderTop="1px solid rgba(0,0,0,0.1)" flexWrap="wrap" justifyContent="center">
+            {/* Legend */}
+            <Box 
+                display="flex" 
+                gap={1} 
+                mt={1.5} 
+                pt={1.5} 
+                borderTop="1px solid rgba(0,0,0,0.1)" 
+                flexWrap="wrap" 
+                justifyContent="center"
+                alignItems="center"
+            >
+                {/* Block state chips */}
                 {Object.values(BLOCK_STATES).map(state => (
                     <Chip
                         key={state.name}
@@ -150,12 +197,52 @@ const MemoryLayout = ({ blocks, totalSize, heapOffset, activeBlock, onBlockClick
                         size="small"
                     />
                 ))}
+                
+                {/* Region chips for heap_5 */}
+                {isHeap5 && (
+                    <>
+                        <Box sx={{ width: '1px', height: '20px', bgcolor: 'rgba(0,0,0,0.2)', mx: 1 }} />
+                        {Object.entries(REGION_COLORS).map(([id, region]) => (
+                            <Tooltip 
+                                key={id} 
+                                title={region.description} 
+                                placement="top" 
+                                arrow
+                            >
+                                <Chip
+                                    label={region.name}
+                                    size="small"
+                                    sx={{
+                                        borderColor: region.border,
+                                        backgroundColor: region.bg,
+                                        color: region.border,
+                                        fontWeight: 'bold',
+                                        cursor: 'help',
+                                        '&:hover': {
+                                            backgroundColor: `${region.border}22`
+                                        }
+                                    }}
+                                    variant="outlined"
+                                    icon={
+                                        <Info 
+                                            sx={{ 
+                                                fontSize: '14px !important', 
+                                                color: `${region.border} !important`,
+                                                ml: 0.5
+                                            }} 
+                                        />
+                                    }
+                                />
+                            </Tooltip>
+                        ))}
+                    </>
+                )}
             </Box>
         </Box>
     );
 };
 
-const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onBlockClick, tooltipRef, resetZoom, onFreeBlock, formatBytes }) => {
+const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onBlockClick, tooltipRef, hoverTooltipRef, resetZoom, onFreeBlock, formatBytes }) => {
     const svgRefs = useRef({});
     const zoomRefs = useRef({});
     const transformRefs = useRef({});
@@ -186,10 +273,62 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
         });
     }, [blocksByRegion, dimensions, regionIds, selectedBlock]);
 
-    const showTooltip = (event, block) => {
+    const hideHoverTooltip = () => {
+        if (hoverTooltipRef.current) {
+            hoverTooltipRef.current.remove();
+            hoverTooltipRef.current = null;
+        }
+    };
+
+    const showHoverTooltip = (event, block) => {
+        // Don't show hover tooltip if this block is selected (persistent tooltip shown)
+        if (selectedBlock && selectedBlock.offset === block.offset && selectedBlock.regionId === block.regionId) {
+            return;
+        }
+
+        hideHoverTooltip();
+
+        const stateName = BLOCK_STATES[block.state]?.name || 'Unknown';
+        const idText = block.allocationId > 0 ? `#${block.allocationId}` : 'Free Block';
+        const regionName = regionNames[block.regionId] || `Region ${block.regionId}`;
+
+        hoverTooltipRef.current = d3.select('body').append('div')
+            .attr('class', 'memory-tooltip-hover')
+            .style('position', 'absolute')
+            .style('background', 'rgba(0, 0, 0, 0.9)')
+            .style('color', 'white')
+            .style('padding', '10px')
+            .style('border-radius', '6px')
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .style('z-index', '9999')
+            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)')
+            .style('border', '1px solid rgba(255,255,255,0.1)')
+            .style('opacity', 0);
+
+        const content = `
+            <div>
+                <div style="font-weight: bold; margin-bottom: 4px; color: #60a5fa;">Region: ${regionName}</div>
+                <div><strong>ID:</strong> ${idText}</div>
+                <div><strong>State:</strong> ${stateName}</div>
+                <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
+                <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
+            </div>
+        `;
+
+        hoverTooltipRef.current.html(content)
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 15) + 'px')
+            .transition()
+            .duration(150)
+            .style('opacity', 1);
+    };
+
+    const showPersistentTooltip = (event, block) => {
         if (tooltipRef.current) {
             tooltipRef.current.remove();
         }
+        hideHoverTooltip();
 
         const stateName = BLOCK_STATES[block.state]?.name || 'Unknown';
         const idText = block.allocationId > 0 ? `#${block.allocationId}` : 'Free Block';
@@ -294,6 +433,9 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                 const { transform } = event;
                 transformRefs.current[regionId] = transform;
                 
+                // Log zoom level to console
+                console.log(`Region ${regionId} (${regionNames[regionId]}) zoom level: ${transform.k.toFixed(2)}`);
+                
                 const newXScale = transform.rescaleX(xScale);
                 
                 let domain = newXScale.domain();
@@ -352,8 +494,11 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
             const blockGroup = g.append('g')
                 .attr('clip-path', `url(#clip-region-${regionId})`);
 
+            // Sort blocks by offset for proper rendering order
+            const sortedBlocks = [...regionBlocks].sort((a, b) => a.offset - b.offset);
+
             const blockGroups = blockGroup.selectAll('.block')
-                .data(regionBlocks)
+                .data(sortedBlocks)
                 .enter()
                 .append('g')
                 .attr('class', 'block');
@@ -370,22 +515,67 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                     if (selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId) {
                         return '#000';
                     }
-                    return 'rgba(255,255,255,0.5)';
+                    return 'none'; // No border by default to avoid overlap issues
                 })
                 .attr('stroke-width', d => {
                     if (selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId) {
                         return 3;
                     }
-                    return 1;
+                    return 0;
                 })
                 .style('cursor', d => d.state === 1 ? 'pointer' : 'default')
+                .on('mouseenter', function(event, d) {
+                    showHoverTooltip(event, d);
+                    // Add hover highlight for allocated blocks
+                    if (d.state === 1 && !(selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId)) {
+                        d3.select(this)
+                            .attr('stroke', '#000')
+                            .attr('stroke-width', 2)
+                            .attr('stroke-opacity', 0.5);
+                    }
+                })
+                .on('mousemove', function(event, d) {
+                    if (hoverTooltipRef.current) {
+                        hoverTooltipRef.current
+                            .style('left', (event.pageX + 15) + 'px')
+                            .style('top', (event.pageY - 15) + 'px');
+                    }
+                })
+                .on('mouseleave', function(event, d) {
+                    hideHoverTooltip();
+                    // Remove hover highlight unless selected
+                    if (!(selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId)) {
+                        d3.select(this)
+                            .attr('stroke', 'none')
+                            .attr('stroke-width', 0);
+                    }
+                })
                 .on('click', function(event, d) {
                     event.stopPropagation();
                     onBlockClick(d);
                     if (d.state === 1) {
-                        showTooltip(event, d);
+                        showPersistentTooltip(event, d);
                     }
                 });
+
+            // Add selection overlay for selected block (renders on top)
+            if (selectedBlock) {
+                const selectedBlockData = sortedBlocks.find(b => 
+                    b.offset === selectedBlock.offset && b.regionId === selectedBlock.regionId
+                );
+                if (selectedBlockData) {
+                    blockGroup.append('rect')
+                        .attr('class', 'block-selection-overlay')
+                        .attr('x', currentXScale(selectedBlockData.offset))
+                        .attr('y', 0)
+                        .attr('width', Math.max(1, currentXScale(selectedBlockData.offset + selectedBlockData.size) - currentXScale(selectedBlockData.offset)))
+                        .attr('height', innerHeight)
+                        .attr('fill', 'none')
+                        .attr('stroke', '#000')
+                        .attr('stroke-width', 3)
+                        .style('pointer-events', 'none');
+                }
+            }
 
             blockGroups.append('text')
                 .attr('class', 'block-text')
@@ -411,6 +601,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
 
         svg.on('click', () => {
             onBlockClick(null);
+            hideHoverTooltip();
         });
     };
 
@@ -434,22 +625,33 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
             .selectAll('text')
             .style('fill', '#000');
 
+        // Build a set of main tick addresses for overlap detection
+        const mainTickSet = new Set(mainTicks.map(t => Math.round(t)));
+
         // Add allocation boundary markers only when zoomed in enough
-        // Require zoom level > 2 for markers to appear
         if (zoomLevel > 2) {
             const markerGroup = g.append('g').attr('class', 'allocation-markers');
             
             const allocatedBlocks = blocks.filter(b => b.state === 1);
             
+            // Build a set of all block start addresses for contiguous detection
+            const startAddresses = new Set(allocatedBlocks.map(b => b.offset));
+            
             allocatedBlocks.forEach(block => {
                 const startX = xScale(block.offset);
                 const endX = xScale(block.offset + block.size);
                 const width = endX - startX;
+                const endAddress = block.offset + block.size;
                 
-                // Only show markers if block is wide enough and not at x=0 for start
+                // Only show markers if block is wide enough
                 if (width > 10) {
-                    const showStart = block.offset > 0 || zoomLevel > 5; // Don't show start marker at 0 unless heavily zoomed
-                    const showEnd = true;
+                    // Don't show start marker if it overlaps with a main tick (like 0x0000)
+                    const startOverlapsMainTick = mainTickSet.has(block.offset);
+                    const showStart = !startOverlapsMainTick && (block.offset > 0 || zoomLevel > 5);
+                    
+                    // Don't show end marker if it's the start of another block (contiguous)
+                    const endIsStartOfAnother = startAddresses.has(endAddress);
+                    const showEnd = !endIsStartOfAnother;
                     
                     // Start marker
                     if (showStart && startX >= 0) {
@@ -475,7 +677,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                     
                     // Add labels if there's enough space (require more zoom for labels)
                     if (width > 80 && zoomLevel > 4) {
-                        // Both start and end
+                        // Start label (only if not overlapping main tick)
                         if (showStart && startX >= 0) {
                             markerGroup.append('text')
                                 .attr('x', startX)
@@ -486,15 +688,18 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                                 .text(`0x${block.offset.toString(16).padStart(4, '0')}`);
                         }
                         
-                        markerGroup.append('text')
-                            .attr('x', endX)
-                            .attr('y', innerHeight + 27)
-                            .attr('text-anchor', 'middle')
-                            .attr('font-size', '9px')
-                            .attr('fill', '#000')
-                            .text(`0x${(block.offset + block.size).toString(16).padStart(4, '0')}`);
+                        // End label (only if not start of another block)
+                        if (showEnd) {
+                            markerGroup.append('text')
+                                .attr('x', endX)
+                                .attr('y', innerHeight + 27)
+                                .attr('text-anchor', 'middle')
+                                .attr('font-size', '9px')
+                                .attr('fill', '#000')
+                                .text(`0x${endAddress.toString(16).padStart(4, '0')}`);
+                        }
                     } else if (width > 40 && zoomLevel > 3) {
-                        // Just start
+                        // Just start label
                         if (showStart && startX >= 0) {
                             markerGroup.append('text')
                                 .attr('x', startX + 2)
@@ -545,7 +750,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
     );
 };
 
-const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedBlock, onBlockClick, tooltipRef, resetZoom, onFreeBlock, formatBytes }) => {
+const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedBlock, onBlockClick, tooltipRef, hoverTooltipRef, resetZoom, onFreeBlock, formatBytes }) => {
     const svgRef = useRef();
     const zoomRef = useRef(null);
     const transformRef = useRef(d3.zoomIdentity);
@@ -561,10 +766,60 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
         }
     }, [resetZoom]);
 
-    const showTooltip = (event, block) => {
+    const hideHoverTooltip = () => {
+        if (hoverTooltipRef.current) {
+            hoverTooltipRef.current.remove();
+            hoverTooltipRef.current = null;
+        }
+    };
+
+    const showHoverTooltip = (event, block) => {
+        // Don't show hover tooltip if this block is selected
+        if (selectedBlock && selectedBlock.offset === block.offset) {
+            return;
+        }
+
+        hideHoverTooltip();
+
+        const stateName = BLOCK_STATES[block.state]?.name || 'Unknown';
+        const idText = block.allocationId > 0 ? `#${block.allocationId}` : 'Free Block';
+
+        hoverTooltipRef.current = d3.select('body').append('div')
+            .attr('class', 'memory-tooltip-hover')
+            .style('position', 'absolute')
+            .style('background', 'rgba(0, 0, 0, 0.9)')
+            .style('color', 'white')
+            .style('padding', '10px')
+            .style('border-radius', '6px')
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .style('z-index', '9999')
+            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)')
+            .style('border', '1px solid rgba(255,255,255,0.1)')
+            .style('opacity', 0);
+
+        const content = `
+            <div>
+                <div><strong>ID:</strong> ${idText}</div>
+                <div><strong>State:</strong> ${stateName}</div>
+                <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
+                <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
+            </div>
+        `;
+
+        hoverTooltipRef.current.html(content)
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 15) + 'px')
+            .transition()
+            .duration(150)
+            .style('opacity', 1);
+    };
+
+    const showPersistentTooltip = (event, block) => {
         if (tooltipRef.current) {
             tooltipRef.current.remove();
         }
+        hideHoverTooltip();
 
         const stateName = BLOCK_STATES[block.state]?.name || 'Unknown';
         const idText = block.allocationId > 0 ? `#${block.allocationId}` : 'Free Block';
@@ -644,18 +899,31 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
             .selectAll('text')
             .style('fill', '#000');
 
+        // Build a set of main tick addresses for overlap detection
+        const mainTickSet = new Set(mainTicks.map(t => Math.round(t)));
+
         if (zoomLevel > 2) {
             const markerGroup = g.append('g').attr('class', 'allocation-markers');
             
             const allocatedBlocks = blocks.filter(b => b.state === 1);
             
+            // Build a set of all block start addresses for contiguous detection
+            const startAddresses = new Set(allocatedBlocks.map(b => b.offset));
+            
             allocatedBlocks.forEach(block => {
                 const startX = xScale(block.offset);
                 const endX = xScale(block.offset + block.size);
                 const width = endX - startX;
+                const endAddress = block.offset + block.size;
                 
                 if (width > 10) {
-                    const showStart = block.offset > 0 || zoomLevel > 5;
+                    // Don't show start marker if it overlaps with a main tick
+                    const startOverlapsMainTick = mainTickSet.has(block.offset);
+                    const showStart = !startOverlapsMainTick && (block.offset > 0 || zoomLevel > 5);
+                    
+                    // Don't show end marker if it's the start of another block
+                    const endIsStartOfAnother = startAddresses.has(endAddress);
+                    const showEnd = !endIsStartOfAnother;
                     
                     if (showStart && startX >= 0) {
                         markerGroup.append('line')
@@ -667,13 +935,15 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                             .attr('stroke-width', 1.5);
                     }
                     
-                    markerGroup.append('line')
-                        .attr('x1', endX)
-                        .attr('x2', endX)
-                        .attr('y1', innerHeight + 5)
-                        .attr('y2', innerHeight + 12)
-                        .attr('stroke', '#000')
-                        .attr('stroke-width', 1.5);
+                    if (showEnd) {
+                        markerGroup.append('line')
+                            .attr('x1', endX)
+                            .attr('x2', endX)
+                            .attr('y1', innerHeight + 5)
+                            .attr('y2', innerHeight + 12)
+                            .attr('stroke', '#000')
+                            .attr('stroke-width', 1.5);
+                    }
                     
                     if (width > 80 && zoomLevel > 4) {
                         if (showStart && startX >= 0) {
@@ -686,13 +956,15 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                                 .text(`0x${block.offset.toString(16).padStart(4, '0')}`);
                         }
                         
-                        markerGroup.append('text')
-                            .attr('x', endX)
-                            .attr('y', innerHeight + 27)
-                            .attr('text-anchor', 'middle')
-                            .attr('font-size', '9px')
-                            .attr('fill', '#000')
-                            .text(`0x${(block.offset + block.size).toString(16).padStart(4, '0')}`);
+                        if (showEnd) {
+                            markerGroup.append('text')
+                                .attr('x', endX)
+                                .attr('y', innerHeight + 27)
+                                .attr('text-anchor', 'middle')
+                                .attr('font-size', '9px')
+                                .attr('fill', '#000')
+                                .text(`0x${endAddress.toString(16).padStart(4, '0')}`);
+                        }
                     } else if (width > 40 && zoomLevel > 3) {
                         if (showStart && startX >= 0) {
                             markerGroup.append('text')
@@ -748,6 +1020,9 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 const { transform } = event;
                 transformRef.current = transform;
                 
+                // Log zoom level to console
+                console.log(`Heap zoom level: ${transform.k.toFixed(2)}`);
+                
                 const newXScale = transform.rescaleX(xScale);
                 
                 let domain = newXScale.domain();
@@ -775,6 +1050,13 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 g.selectAll('.block-text')
                     .attr('x', d => finalScale(d.offset) + (finalScale(d.offset + d.size) - finalScale(d.offset)) / 2)
                     .style('display', d => (finalScale(d.offset + d.size) - finalScale(d.offset)) > 30 ? 'block' : 'none');
+                
+                // Update selection overlay position
+                if (selectedBlock) {
+                    g.select('.block-selection-overlay')
+                        .attr('x', finalScale(selectedBlock.offset))
+                        .attr('width', Math.max(1, finalScale(selectedBlock.offset + selectedBlock.size) - finalScale(selectedBlock.offset)));
+                }
                 
                 updateAxis(g, finalScale, totalSize, blocks, innerHeight, adjustedTransform.k);
             });
@@ -805,8 +1087,11 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
             const blockGroup = g.append('g')
                 .attr('clip-path', 'url(#clip-main)');
 
+            // Sort blocks by offset
+            const sortedBlocks = [...blocks].sort((a, b) => a.offset - b.offset);
+
             const blockGroups = blockGroup.selectAll('.block')
-                .data(blocks)
+                .data(sortedBlocks)
                 .enter()
                 .append('g')
                 .attr('class', 'block');
@@ -819,26 +1104,57 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 .attr('height', innerHeight)
                 .attr('fill', d => BLOCK_STATES[d.state]?.color || '#999')
                 .attr('opacity', d => d.state === 0 ? 0.5 : 1.0)
-                .attr('stroke', d => {
-                    if (selectedBlock && selectedBlock.offset === d.offset) {
-                        return '#000';
-                    }
-                    return 'rgba(255,255,255,0.5)';
-                })
-                .attr('stroke-width', d => {
-                    if (selectedBlock && selectedBlock.offset === d.offset) {
-                        return 3;
-                    }
-                    return 1;
-                })
+                .attr('stroke', 'none')
+                .attr('stroke-width', 0)
                 .style('cursor', d => d.state === 1 ? 'pointer' : 'default')
+                .on('mouseenter', function(event, d) {
+                    showHoverTooltip(event, d);
+                    if (d.state === 1 && !(selectedBlock && selectedBlock.offset === d.offset)) {
+                        d3.select(this)
+                            .attr('stroke', '#000')
+                            .attr('stroke-width', 2)
+                            .attr('stroke-opacity', 0.5);
+                    }
+                })
+                .on('mousemove', function(event, d) {
+                    if (hoverTooltipRef.current) {
+                        hoverTooltipRef.current
+                            .style('left', (event.pageX + 15) + 'px')
+                            .style('top', (event.pageY - 15) + 'px');
+                    }
+                })
+                .on('mouseleave', function(event, d) {
+                    hideHoverTooltip();
+                    if (!(selectedBlock && selectedBlock.offset === d.offset)) {
+                        d3.select(this)
+                            .attr('stroke', 'none')
+                            .attr('stroke-width', 0);
+                    }
+                })
                 .on('click', function(event, d) {
                     event.stopPropagation();
                     onBlockClick(d);
                     if (d.state === 1) {
-                        showTooltip(event, d);
+                        showPersistentTooltip(event, d);
                     }
                 });
+
+            // Add selection overlay for selected block
+            if (selectedBlock) {
+                const selectedBlockData = sortedBlocks.find(b => b.offset === selectedBlock.offset);
+                if (selectedBlockData) {
+                    blockGroup.append('rect')
+                        .attr('class', 'block-selection-overlay')
+                        .attr('x', currentXScale(selectedBlockData.offset))
+                        .attr('y', 0)
+                        .attr('width', Math.max(1, currentXScale(selectedBlockData.offset + selectedBlockData.size) - currentXScale(selectedBlockData.offset)))
+                        .attr('height', innerHeight)
+                        .attr('fill', 'none')
+                        .attr('stroke', '#000')
+                        .attr('stroke-width', 3)
+                        .style('pointer-events', 'none');
+                }
+            }
 
             blockGroups.append('text')
                 .attr('class', 'block-text')
@@ -864,6 +1180,7 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
 
         svg.on('click', () => {
             onBlockClick(null);
+            hideHoverTooltip();
         });
 
     }, [blocks, totalSize, dimensions, selectedBlock, onBlockClick]);

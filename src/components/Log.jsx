@@ -63,13 +63,13 @@ const Log = ({ logs, currentHeap }) => {
                 sx={{ 
                     flex: 1, 
                     overflowY: 'auto',
-                    maxHeight: '250px',
-                    border: '1px solid #ddd',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     borderRadius: 1,
-                    bgcolor: '#f5f5f5'
+                    bgcolor: 'rgba(0,0,0,0.02)'
                 }}
             >
-                <List dense>
+                <List dense sx={{ py: 0 }}>
                     {logs.length === 0 ? (
                         <ListItem>
                             <Typography variant="body2" color="text.secondary">
@@ -81,18 +81,21 @@ const Log = ({ logs, currentHeap }) => {
                             <ListItem
                                 key={index}
                                 sx={{ 
-                                    borderBottom: '1px solid #eee',
-                                    '&:last-child': { borderBottom: 'none' }
+                                    borderBottom: '1px solid',
+                                    borderColor: 'divider',
+                                    '&:last-child': { borderBottom: 'none' },
+                                    py: 0.75
                                 }}
                             >
                                 <Box width="100%">
-                                    <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                                    <Box display="flex" alignItems="center" gap={0.75} mb={0.25} flexWrap="wrap">
                                         <Chip
                                             label={log.action}
                                             size="small"
                                             color={getActionColor(log.action)}
+                                            sx={{ height: '22px', fontSize: '0.7rem' }}
                                         />
-                                        <Typography variant="caption" color="text.secondary">
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                                             #{log.timestamp}
                                         </Typography>
                                         
@@ -104,8 +107,8 @@ const Log = ({ logs, currentHeap }) => {
                                                 color={getRegionColor(log.regionId)}
                                                 variant="outlined"
                                                 sx={{ 
-                                                    height: '20px',
-                                                    fontSize: '0.7rem',
+                                                    height: '18px',
+                                                    fontSize: '0.65rem',
                                                     fontWeight: 'bold'
                                                 }}
                                             />
@@ -116,11 +119,12 @@ const Log = ({ logs, currentHeap }) => {
                                                 label="FAILED"
                                                 size="small"
                                                 color="error"
+                                                sx={{ height: '20px', fontSize: '0.65rem' }}
                                             />
                                         )}
                                     </Box>
                                     {formatLogEntry(log) && (
-                                        <Typography variant="body2" color="text.secondary">
+                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                                             {formatLogEntry(log)}
                                         </Typography>
                                     )}
@@ -131,17 +135,10 @@ const Log = ({ logs, currentHeap }) => {
                 </List>
             </Box>
             
-            <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
+            <Box mt={1} display="flex" justifyContent="flex-start" alignItems="center">
                 <Typography variant="caption" color="text.secondary">
                     {logs.length} operations logged
                 </Typography>
-                {currentHeap === 5 && (
-                    <Box display="flex" gap={0.5}>
-                        <Chip label="FAST" size="small" color="primary" variant="outlined" sx={{ height: '18px', fontSize: '0.65rem' }} />
-                        <Chip label="DMA" size="small" color="secondary" variant="outlined" sx={{ height: '18px', fontSize: '0.65rem' }} />
-                        <Chip label="UNCACHED" size="small" color="info" variant="outlined" sx={{ height: '18px', fontSize: '0.65rem' }} />
-                    </Box>
-                )}
             </Box>
         </Box>
     );

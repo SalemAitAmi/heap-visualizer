@@ -10,6 +10,18 @@ import { getSimulations } from './utils/simulations';
 
 const HEAP_SIZE = 32768; // 32KB for visualization
 
+// Common paper styles for consistent container styling
+const paperStyles = {
+    p: 2.5,
+    border: '1px solid',
+    borderColor: 'divider',
+    borderRadius: 3,
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(249,250,251,0.95) 100%)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
+};
+
 function App() {
     const [heapModule] = useState(new HeapModule());
     const [initialized, setInitialized] = useState(false);
@@ -30,6 +42,9 @@ function App() {
     const [simulationSteps, setSimulationSteps] = useState([]);
     const [allocatedPointers, setAllocatedPointers] = useState([]);
     const [manualFreeOperations, setManualFreeOperations] = useState([]);
+    
+    // Track pointer to block mapping for free operations
+    const [pointerBlockMap, setPointerBlockMap] = useState(new Map());
     
     const playbackTimer = useRef(null);
     const stepRef = useRef(0);
@@ -107,12 +122,16 @@ function App() {
         heapModule.switchHeap(newHeap);
         heapModule.initHeap(HEAP_SIZE);
         setAllocatedPointers([]);
+        setPointerBlockMap(new Map());
+        setActiveBlock(null); // Clear selected block
         setResetZoom(true);
         refreshData();
     };
 
     const handleAllocate = (size, count, region = null) => {
         const newPointers = [];
+        const newMappings = new Map(pointerBlockMap);
+        
         for (let i = 0; i < count; i++) {
             let ptr;
             if (currentHeap === 5 && region !== null && region !== 255) {
@@ -124,31 +143,133 @@ function App() {
             }
             if (ptr) {
                 newPointers.push(ptr);
+                // Store mapping with allocation details
+                newMappings.set(ptr, { size, region, allocIndex: allocatedPointers.length + newPointers.length - 1 });
             }
         }
+        
         setAllocatedPointers(prev => [...prev, ...newPointers]);
+        setPointerBlockMap(newMappings);
         refreshData();
     };
 
     const handleFreeBlock = (block) => {
-        // Find the pointer - for heap implementations with headers,
-        // the pointer is the block offset + header size
-        const headerSize = currentHeap === 1 ? 0 : 4; // heap_1 has no header
-        const expectedPtr = block.offset + headerSize;
+        console.log('handleFreeBlock called with block:', block);
+        console.log('Current allocated pointers:', allocatedPointers);
         
-        // Find closest matching pointer
+        if (allocatedPointers.length === 0) {
+            console.warn('No allocated pointers to free');
+            return;
+        }
+        
+        // For heap implementations with headers, the pointer returned by malloc
+        // points to the user data area, which is after the header.
+        // The block.offset from getBlocks() is the start of the block including header.
+        
+        // Different heaps have different header sizes:
+        // heap_1: no header (allocations are sequential), ptr = heap_memory + offset
+        // heap_2, heap_4, heap_5: 4-byte header (stores size), ptr = heap_memory + offset + 4
+        // heap_3: uses system malloc
+        
+        const headerSize = currentHeap === 1 ? 0 : (currentHeap === 3 ? 0 : 4);
+        
+        // Strategy: Match based on the relationship between pointers and block offsets
+        // For any allocated block: ptr = heap_memory_base + block.offset + headerSize
+        // So: ptr - block.offset = heap_memory_base + headerSize (constant for all blocks)
+        
+        // Get all current blocks to establish the mapping
+        const currentBlocks = heapModule.getBlocks();
+        const allocatedBlocks = currentBlocks.filter(b => b.state === 1);
+        
+        console.log('Allocated blocks:', allocatedBlocks);
+        console.log('Looking for block with offset:', block.offset, 'allocationId:', block.allocationId);
+        
         let matchingPtr = null;
-        let minDiff = Infinity;
         
-        allocatedPointers.forEach(ptr => {
-            const diff = Math.abs(ptr - expectedPtr);
-            if (diff < minDiff && diff < 20) { // Allow small variance
-                minDiff = diff;
-                matchingPtr = ptr;
+        // Method 1: If we have pointers and blocks, calculate base address
+        if (allocatedPointers.length > 0 && allocatedBlocks.length > 0) {
+            // We need to figure out which pointer corresponds to which block
+            // Sort both by offset/value to try to establish correspondence
+            const sortedPointers = [...allocatedPointers].sort((a, b) => a - b);
+            const sortedBlocks = [...allocatedBlocks].sort((a, b) => a.offset - b.offset);
+            
+            // Calculate the base for each potential matching pair
+            // The difference between pointer and (offset + headerSize) should be consistent
+            let baseAddress = null;
+            
+            // Try to find a consistent base address
+            if (sortedPointers.length === sortedBlocks.length) {
+                // Perfect match - each pointer should correspond to each block
+                const bases = sortedPointers.map((ptr, i) => 
+                    ptr - sortedBlocks[i].offset - headerSize
+                );
+                
+                // Check if all bases are the same (within tolerance for alignment)
+                const firstBase = bases[0];
+                const allConsistent = bases.every(b => Math.abs(b - firstBase) < 8);
+                
+                if (allConsistent) {
+                    baseAddress = firstBase;
+                    console.log('Calculated consistent base address:', baseAddress);
+                }
             }
-        });
+            
+            if (baseAddress !== null) {
+                // Now find the pointer for our target block
+                const expectedPtr = baseAddress + block.offset + headerSize;
+                console.log('Expected pointer for target block:', expectedPtr);
+                
+                // Find the closest matching pointer
+                let minDiff = Infinity;
+                sortedPointers.forEach(ptr => {
+                    const diff = Math.abs(ptr - expectedPtr);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        matchingPtr = ptr;
+                    }
+                });
+                
+                // Accept if within reasonable tolerance
+                if (minDiff > 16) {
+                    console.warn('Best match has large diff:', minDiff);
+                    matchingPtr = null;
+                }
+            }
+        }
+        
+        // Method 2: Fallback - match by allocation order/ID
+        if (!matchingPtr && block.allocationId > 0) {
+            // Find the index of this block among allocated blocks by allocationId
+            const blockIdx = allocatedBlocks.findIndex(b => 
+                b.allocationId === block.allocationId && 
+                b.offset === block.offset &&
+                (block.regionId === undefined || b.regionId === block.regionId)
+            );
+            
+            if (blockIdx !== -1) {
+                // Sort blocks by allocationId to establish order
+                const blocksByAllocId = [...allocatedBlocks].sort((a, b) => a.allocationId - b.allocationId);
+                const orderIdx = blocksByAllocId.findIndex(b => 
+                    b.allocationId === block.allocationId && b.offset === block.offset
+                );
+                
+                if (orderIdx !== -1 && orderIdx < allocatedPointers.length) {
+                    // This assumes pointers are stored in allocation order
+                    // But after frees, the order might not match
+                    // So this is a fallback that might not always work
+                    console.log('Fallback: trying pointer at order index:', orderIdx);
+                }
+            }
+        }
 
+        // Method 3: Last resort - if only one pointer left, use it
+        if (!matchingPtr && allocatedPointers.length === 1 && allocatedBlocks.length === 1) {
+            matchingPtr = allocatedPointers[0];
+            console.log('Single pointer fallback:', matchingPtr);
+        }
+        
         if (matchingPtr) {
+            console.log('Found matching pointer:', matchingPtr);
             heapModule.free(matchingPtr);
             
             // Track this manual free operation
@@ -160,11 +281,22 @@ function App() {
                 timestamp: Date.now()
             }]);
             
-            // Remove from allocated pointers
+            // Remove from allocated pointers and mapping
             setAllocatedPointers(prev => prev.filter(p => p !== matchingPtr));
+            setPointerBlockMap(prev => {
+                const newMap = new Map(prev);
+                newMap.delete(matchingPtr);
+                return newMap;
+            });
+            
+            // Clear the active block selection
+            setActiveBlock(null);
+            
             refreshData();
         } else {
             console.warn('Could not find matching pointer for block:', block);
+            console.warn('Available pointers:', allocatedPointers);
+            console.warn('Available allocated blocks:', allocatedBlocks);
         }
     };
 
@@ -180,6 +312,8 @@ function App() {
 
     const handleSimulationChange = (simulationName) => {
         resetPlayback();
+        setActiveBlock(null); // Clear selected block on simulation change
+        
         const simulations = getSimulations();
         const selectedSim = simulations[simulationName];
         if (selectedSim) {
@@ -187,6 +321,7 @@ function App() {
             setSimulationSteps(selectedSim.steps);
             heapModule.reset();
             setAllocatedPointers([]);
+            setPointerBlockMap(new Map());
             refreshData();
         } else {
             setSimulation(null);
@@ -206,6 +341,11 @@ function App() {
             
             if (ptr) {
                 setAllocatedPointers(prev => [...prev, ptr]);
+                setPointerBlockMap(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(ptr, { size: step.size, flags: step.flags });
+                    return newMap;
+                });
             }
         } else if (step.action === 'free' && step.ptrIndex !== undefined) {
             setAllocatedPointers(prev => {
@@ -269,9 +409,13 @@ function App() {
         if (currentStep > 0) {
             heapModule.reset();
             setAllocatedPointers([]);
+            setPointerBlockMap(new Map());
             setManualFreeOperations([]);
+            setActiveBlock(null); // Clear selected block
             
             const newPointers = [];
+            const newMap = new Map();
+            
             for (let i = 0; i < currentStep - 1; i++) {
                 const step = simulationSteps[i];
                 if (step.action === 'allocate') {
@@ -281,6 +425,7 @@ function App() {
                     
                     if (ptr) {
                         newPointers.push(ptr);
+                        newMap.set(ptr, { size: step.size, flags: step.flags });
                     }
                 } else if (step.action === 'free' && step.ptrIndex !== undefined) {
                     if (step.ptrIndex < newPointers.length && newPointers[step.ptrIndex]) {
@@ -290,6 +435,7 @@ function App() {
             }
             
             setAllocatedPointers(newPointers);
+            setPointerBlockMap(newMap);
             setCurrentStep(prev => prev - 1);
             refreshData();
         }
@@ -299,6 +445,8 @@ function App() {
         resetPlayback();
         heapModule.reset();
         setAllocatedPointers([]);
+        setPointerBlockMap(new Map());
+        setActiveBlock(null); // Clear selected block
         setResetZoom(true);
         
         if (simulation) {
@@ -355,13 +503,13 @@ function App() {
 
     return (
         <Fade in={initialized}>
-            <Box className="app" p={3}>
+            <Box className="app" sx={{ p: { xs: 2, md: 3 }, minHeight: '100vh' }}>
                 {/* Modern Header */}
                 <Box 
                     sx={{ 
                         textAlign: 'center', 
-                        mb: 4,
-                        p: 3,
+                        mb: 3,
+                        p: { xs: 2, md: 3 },
                         background: 'linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(236,72,153,0.05) 100%)',
                         borderRadius: 3,
                         border: '1px solid',
@@ -369,10 +517,11 @@ function App() {
                     }}
                 >
                     <Box display="flex" justifyContent="center" alignItems="center" gap={2} mb={1}>
-                        <CodeIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                        <CodeIcon sx={{ fontSize: { xs: 32, md: 40 }, color: 'primary.main' }} />
                         <Typography 
                             variant="h3" 
                             sx={{ 
+                                fontSize: { xs: '1.75rem', md: '2.5rem' },
                                 background: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
                                 backgroundClip: 'text',
                                 WebkitBackgroundClip: 'text',
@@ -388,60 +537,81 @@ function App() {
                         sx={{ 
                             color: 'text.secondary',
                             fontWeight: 400,
-                            letterSpacing: 0
+                            letterSpacing: 0,
+                            fontSize: { xs: '0.9rem', md: '1.1rem' }
                         }}
                     >
                         {heapInfo.name}
                     </Typography>
                 </Box>
                 
-                <Grid container spacing={3}>
-                    {/* Controls */}
-                    <Grid item xs={12} md={6}>
-                        <Paper elevation={0} sx={{ p: 2.5, height: '380px', /* ... */ }}>
-                            <Controls
-                                availableHeaps={availableHeaps}
-                                currentHeap={currentHeap}
-                                onHeapChange={handleHeapChange}
-                                onAllocate={handleAllocate}
-                                onSimulationChange={handleSimulationChange}
-                                isPlaying={isPlaying}
-                                playbackSpeed={playbackSpeed}
-                                onPlay={handlePlay}
-                                onPause={handlePause}
-                                onStepForward={handleStepForward}
-                                onStepBackward={handleStepBackward}
-                                onReset={handleReset}
-                                onSpeedChange={handleSpeedChange}
-                                currentStep={currentStep}
-                                totalSteps={simulationSteps.length}
-                                simulation={simulation}
-                            />
+                <Grid container spacing={2}>
+                    {/* Controls and Statistics Row */}
+                    <Grid item xs={12} lg={6}>
+                        <Paper 
+                            elevation={0} 
+                            sx={{ 
+                                ...paperStyles,
+                                minHeight: { xs: 'auto', md: '380px' },
+                                height: '100%'
+                            }}
+                        >
+                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary', flexShrink: 0 }}>
+                                Controls
+                            </Typography>
+                            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                                <Controls
+                                    availableHeaps={availableHeaps}
+                                    currentHeap={currentHeap}
+                                    onHeapChange={handleHeapChange}
+                                    onAllocate={handleAllocate}
+                                    onSimulationChange={handleSimulationChange}
+                                    isPlaying={isPlaying}
+                                    playbackSpeed={playbackSpeed}
+                                    onPlay={handlePlay}
+                                    onPause={handlePause}
+                                    onStepForward={handleStepForward}
+                                    onStepBackward={handleStepBackward}
+                                    onReset={handleReset}
+                                    onSpeedChange={handleSpeedChange}
+                                    currentStep={currentStep}
+                                    totalSteps={simulationSteps.length}
+                                    simulation={simulation}
+                                />
+                            </Box>
                         </Paper>
                     </Grid>
 
-                    {/* Statistics */}
-                    <Grid item xs={12} md={6}>
-                        <Paper elevation={0} sx={{ p: 2.5, height: '380px', /* ... */ }}>
-                            <Statistics 
-                                stats={stats} 
-                                currentHeap={currentHeap}
-                                blocks={blocks}
-                                heapModule={heapModule}
-                            />
+                    <Grid item xs={12} lg={6}>
+                        <Paper 
+                            elevation={0} 
+                            sx={{ 
+                                ...paperStyles,
+                                minHeight: { xs: 'auto', md: '380px' },
+                                height: '100%'
+                            }}
+                        >
+                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary', flexShrink: 0 }}>
+                                Statistics
+                            </Typography>
+                            <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                                <Statistics 
+                                    stats={stats} 
+                                    currentHeap={currentHeap}
+                                    blocks={blocks}
+                                    heapModule={heapModule}
+                                />
+                            </Box>
                         </Paper>
                     </Grid>
 
-                    {/* Memory Layout */}
+                    {/* Memory Layout - Full Width */}
                     <Grid item xs={12}>
                         <Paper 
                             elevation={0} 
                             sx={{ 
-                                p: 2.5, 
-                                height: currentHeap === 5 ? '800px' : '450px',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(249,250,251,0.9) 100%)',
+                                ...paperStyles,
+                                minHeight: currentHeap === 5 ? { xs: '600px', md: '750px' } : { xs: '350px', md: '450px' },
                             }}
                         >
                             <MemoryLayout
@@ -456,13 +626,21 @@ function App() {
                         </Paper>
                     </Grid>
 
-                    {/* Log */}
+                    {/* Log - Full Width */}
                     <Grid item xs={12}>
-                        <Paper elevation={0} sx={{ p: 2.5, height: '300px', /* ... */ }}>
-                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                        <Paper 
+                            elevation={0} 
+                            sx={{ 
+                                ...paperStyles,
+                                minHeight: { xs: '250px', md: '300px' },
+                            }}
+                        >
+                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary', flexShrink: 0 }}>
                                 Execution Log
                             </Typography>
-                            <Log logs={logs} currentHeap={currentHeap}/>
+                            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                                <Log logs={logs} currentHeap={currentHeap}/>
+                            </Box>
                         </Paper>
                     </Grid>
                 </Grid>

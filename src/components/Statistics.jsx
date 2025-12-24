@@ -103,14 +103,21 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
     };
 
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 1.5,
+            overflow: 'visible'
+        }}>
             {/* Region Selector for heap_5 */}
             {showRegionSelector && (
                 <Box sx={{ 
                     p: 1.5, 
                     background: 'rgba(99,102,241,0.05)',
                     borderRadius: 2,
-                    border: '1px solid rgba(99,102,241,0.1)'
+                    border: '1px solid rgba(99,102,241,0.1)',
+                    flexShrink: 0
                 }}>
                     <Box display="flex" alignItems="center" gap={0.5} mb={1}>
                         <LayersIcon fontSize="small" sx={{ color: 'primary.main' }} />
@@ -139,7 +146,7 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
             )}
 
             {/* Memory Usage */}
-            <Box>
+            <Box sx={{ flexShrink: 0 }}>
                 <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
                     <MemoryIcon fontSize="small" sx={{ color: 'primary.main' }} />
                     <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
@@ -153,7 +160,7 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                         <Typography variant="caption" color="text.secondary">
                             Allocated
                         </Typography>
-                        <Typography variant="body2" fontWeight="600" color="text.primary">
+                        <Typography variant="body2" fontWeight="600" color="text.primary" noWrap>
                             {formatBytes(allocatedBytes)} ({allocatedPercent.toFixed(1)}%)
                         </Typography>
                         <LinearProgress
@@ -174,7 +181,7 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                         <Typography variant="caption" color="text.secondary">
                             Free
                         </Typography>
-                        <Typography variant="body2" fontWeight="600" color="text.primary">
+                        <Typography variant="body2" fontWeight="600" color="text.primary" noWrap>
                             {formatBytes(freeBytes)} ({freePercent.toFixed(1)}%)
                         </Typography>
                         <LinearProgress
@@ -194,10 +201,10 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                 </Grid>
             </Box>
 
-            <Divider sx={{ borderColor: 'rgba(0,0,0,0.06)' }} />
+            <Divider sx={{ borderColor: 'rgba(0,0,0,0.06)', flexShrink: 0 }} />
 
             {/* Block Statistics */}
-            <Box>
+            <Box sx={{ flexShrink: 0 }}>
                 <Box display="flex" alignItems="center" gap={0.5} mb={1}>
                     <StorageIcon fontSize="small" sx={{ color: 'primary.main' }} />
                     <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
@@ -205,19 +212,19 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                     </Typography>
                 </Box>
                 
-                <Grid container spacing={2}>
+                <Grid container spacing={1}>
                     <Grid item xs={4}>
                         <Box sx={{ 
                             textAlign: 'center', 
-                            p: 1, 
+                            p: 0.75, 
                             borderRadius: 2,
                             background: 'rgba(99,102,241,0.05)',
                             border: '1px solid rgba(99,102,241,0.1)'
                         }}>
-                            <Typography variant="h5" fontWeight="bold" color="primary.main">
+                            <Typography variant="h6" fontWeight="bold" color="primary.main">
                                 {allocationCount}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                                 Allocations
                             </Typography>
                         </Box>
@@ -225,15 +232,15 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                     <Grid item xs={4}>
                         <Box sx={{ 
                             textAlign: 'center', 
-                            p: 1, 
+                            p: 0.75, 
                             borderRadius: 2,
                             background: 'rgba(16,185,129,0.05)',
                             border: '1px solid rgba(16,185,129,0.1)'
                         }}>
-                            <Typography variant="h5" fontWeight="bold" sx={{ color: '#10b981' }}>
+                            <Typography variant="h6" fontWeight="bold" sx={{ color: '#10b981' }}>
                                 {freeBlockCount}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                                 Free Blocks
                             </Typography>
                         </Box>
@@ -241,38 +248,50 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                     <Grid item xs={4}>
                         <Box sx={{ 
                             textAlign: 'center', 
-                            p: 1, 
+                            p: 0.75, 
                             borderRadius: 2,
                             background: 'rgba(59,130,246,0.05)',
                             border: '1px solid rgba(59,130,246,0.1)'
                         }}>
-                            <Typography variant="h5" fontWeight="bold" sx={{ color: '#3b82f6' }}>
+                            <Typography variant="h6" fontWeight="bold" sx={{ color: '#3b82f6' }}>
                                 {formatBytes(totalSize)}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {selectedRegion !== 'all' ? 'Region Size' : 'Total Size'}
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                {selectedRegion !== 'all' ? 'Region' : 'Total'}
                             </Typography>
                         </Box>
                     </Grid>
                 </Grid>
 
-                <Grid container spacing={1} sx={{ mt: 1 }}>
+                <Grid container spacing={1} sx={{ mt: 0.5 }}>
                     <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">
-                            Largest Free Block
-                        </Typography>
-                        <Typography variant="body2" fontWeight="600">
-                            {formatBytes(largestFreeBlock)}
-                        </Typography>
+                        <Box sx={{ 
+                            p: 0.75, 
+                            borderRadius: 1,
+                            background: 'rgba(0,0,0,0.02)'
+                        }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                Largest Free Block
+                            </Typography>
+                            <Typography variant="body2" fontWeight="600" noWrap>
+                                {formatBytes(largestFreeBlock)}
+                            </Typography>
+                        </Box>
                     </Grid>
                     {showMinHistoric && (
                         <Grid item xs={6}>
-                            <Typography variant="caption" color="text.secondary">
-                                Historical Minimum
-                            </Typography>
-                            <Typography variant="body2" fontWeight="600">
-                                {formatBytes(minFreeBytes)}
-                            </Typography>
+                            <Box sx={{ 
+                                p: 0.75, 
+                                borderRadius: 1,
+                                background: 'rgba(0,0,0,0.02)'
+                            }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                    Historical Minimum
+                                </Typography>
+                                <Typography variant="body2" fontWeight="600" noWrap>
+                                    {formatBytes(minFreeBytes)}
+                                </Typography>
+                            </Box>
                         </Grid>
                     )}
                 </Grid>
@@ -281,12 +300,12 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
             {/* Fragmentation Analysis */}
             {showFragmentation && (
                 <>
-                    <Divider sx={{ borderColor: 'rgba(0,0,0,0.06)' }} />
-                    <Box>
-                        <Box display="flex" alignItems="center" gap={0.5} mb={1}>
+                    <Divider sx={{ borderColor: 'rgba(0,0,0,0.06)', flexShrink: 0 }} />
+                    <Box sx={{ flexShrink: 0 }}>
+                        <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
                             <FragmentIcon fontSize="small" sx={{ color: 'primary.main' }} />
-                            <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
-                                Fragmentation Analysis
+                            <Typography variant="subtitle2" fontWeight="bold" color="text.primary" noWrap>
+                                Fragmentation
                                 {selectedRegion !== 'all' && ` - ${getRegionName(selectedRegion)}`}
                             </Typography>
                         </Box>
@@ -295,17 +314,17 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                             <Grid item xs={6}>
                                 <Box>
                                     <Box display="flex" alignItems="center" gap={0.5}>
-                                        <Typography variant="caption" color="text.secondary">
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                                             External
                                         </Typography>
                                         <Tooltip title={externalFragTooltip} placement="top" arrow>
                                             <IconButton size="small" sx={{ p: 0 }}>
-                                                <HelpIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <HelpIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
                                             </IconButton>
                                         </Tooltip>
                                     </Box>
                                     <Typography 
-                                        variant="h6" 
+                                        variant="body1" 
                                         fontWeight="bold"
                                         sx={{ color: getFragmentationColor(externalFragmentation) }}
                                     >
@@ -313,7 +332,7 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                                     </Typography>
                                     <LinearProgress
                                         variant="determinate"
-                                        value={externalFragmentation}
+                                        value={Math.min(externalFragmentation, 100)}
                                         sx={{ 
                                             height: 4, 
                                             borderRadius: 2,
@@ -329,17 +348,17 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                             <Grid item xs={6}>
                                 <Box>
                                     <Box display="flex" alignItems="center" gap={0.5}>
-                                        <Typography variant="caption" color="text.secondary">
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                                             Internal
                                         </Typography>
                                         <Tooltip title={internalFragTooltip} placement="top" arrow>
                                             <IconButton size="small" sx={{ p: 0 }}>
-                                                <HelpIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                                <HelpIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
                                             </IconButton>
                                         </Tooltip>
                                     </Box>
                                     <Typography 
-                                        variant="h6" 
+                                        variant="body1" 
                                         fontWeight="bold"
                                         sx={{ color: getFragmentationColor(internalFragmentation) }}
                                     >
@@ -347,7 +366,7 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                                     </Typography>
                                     <LinearProgress
                                         variant="determinate"
-                                        value={internalFragmentation}
+                                        value={Math.min(internalFragmentation, 100)}
                                         sx={{ 
                                             height: 4, 
                                             borderRadius: 2,
@@ -362,16 +381,18 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                             </Grid>
                         </Grid>
 
-                        <Box mt={1}>
+                        <Box mt={0.5}>
                             <Chip 
                                 size="small" 
                                 label={
                                     selectedRegion === 'all' ? "Averaged across all regions" :
-                                    externalFragmentation > 30 ? "High fragmentation detected" :
+                                    externalFragmentation > 30 ? "High fragmentation" :
                                     externalFragmentation > 10 ? "Moderate fragmentation" :
                                     "Low fragmentation"
                                 }
                                 sx={{
+                                    height: '20px',
+                                    fontSize: '0.65rem',
                                     backgroundColor: externalFragmentation > 30 ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)',
                                     borderColor: externalFragmentation > 30 ? '#f59e0b' : 'transparent',
                                     fontWeight: 500
@@ -383,18 +404,20 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                 </>
             )}
 
-            {/* Heap-specific info */}
+            {/* Heap-specific info - pushed to bottom */}
+            <Box sx={{ flexGrow: 1 }} />
+            
             {currentHeap === 1 && (
                 <Box 
-                    mt="auto" 
-                    p={1.5} 
+                    p={1} 
                     sx={{ 
                         background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(99,102,241,0.08) 100%)',
                         borderRadius: 2,
-                        border: '1px solid rgba(99,102,241,0.1)'
+                        border: '1px solid rgba(99,102,241,0.1)',
+                        flexShrink: 0
                     }}
                 >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                         <strong style={{ color: '#6366f1' }}>Bump Allocator:</strong> Simple linear allocation, no free support, zero fragmentation
                     </Typography>
                 </Box>
@@ -402,15 +425,15 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
             
             {currentHeap === 3 && (
                 <Box 
-                    mt="auto" 
-                    p={1.5} 
+                    p={1} 
                     sx={{ 
                         background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(99,102,241,0.08) 100%)',
                         borderRadius: 2,
-                        border: '1px solid rgba(99,102,241,0.1)'
+                        border: '1px solid rgba(99,102,241,0.1)',
+                        flexShrink: 0
                     }}
                 >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                         <strong style={{ color: '#6366f1' }}>Thread-Safe Wrapper:</strong> Uses system malloc/free with mutex protection
                     </Typography>
                 </Box>
@@ -418,15 +441,15 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
             
             {currentHeap === 5 && (
                 <Box 
-                    mt="auto" 
-                    p={1.5} 
+                    p={1} 
                     sx={{ 
                         background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(99,102,241,0.08) 100%)',
                         borderRadius: 2,
-                        border: '1px solid rgba(99,102,241,0.1)'
+                        border: '1px solid rgba(99,102,241,0.1)',
+                        flexShrink: 0
                     }}
                 >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                         <strong style={{ color: '#6366f1' }}>Multi-Region Heap:</strong> 
                         {selectedRegion === 'all' 
                             ? ' Supports FAST, DMA, and UNCACHED memory regions'
