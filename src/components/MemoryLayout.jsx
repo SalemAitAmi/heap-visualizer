@@ -4,25 +4,11 @@ import {
     Typography, 
     Chip, 
     IconButton, 
-    Tooltip,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    TextField,
-    Button,
-    Stack,
-    Divider
+    Tooltip
 } from '@mui/material';
-import { 
-    Info, 
-    PlayArrow, 
-    Pause, 
-    SkipPrevious, 
-    SkipNext, 
-    Refresh 
-} from '@mui/icons-material';
+import { Info } from '@mui/icons-material';
 import * as d3 from 'd3';
+import { EmbeddedControls } from './Controls';
 
 const BLOCK_STATES = {
     0: { name: 'Free', color: '#4CAF50', label: 'Free Memory' },
@@ -30,200 +16,15 @@ const BLOCK_STATES = {
     2: { name: 'Freed', color: '#FF9800', label: 'Freed Block' }
 };
 
+// Region colors using a distinct purple/magenta/cyan theme to avoid conflict with block state colors
 const REGION_COLORS = {
-    0: { border: '#6366f1', bg: 'rgba(99,102,241,0.05)', name: 'FAST', description: 'High-speed cache-friendly memory for frequently accessed data' },
-    1: { border: '#10b981', bg: 'rgba(16,185,129,0.05)', name: 'DMA', description: 'DMA-capable memory for hardware buffer transfers' },
-    2: { border: '#3b82f6', bg: 'rgba(59,130,246,0.05)', name: 'UNCACHED', description: 'Uncached memory for bulk data storage' }
-};
-
-// Embedded Controls Component
-const EmbeddedControls = ({
-    availableHeaps,
-    currentHeap,
-    onHeapChange,
-    onAllocate,
-    onSimulationChange,
-    isPlaying,
-    playbackSpeed,
-    onPlay,
-    onPause,
-    onStepForward,
-    onStepBackward,
-    onReset,
-    onSpeedChange,
-    currentStep,
-    totalSteps,
-    simulation
-}) => {
-    const [allocSize, setAllocSize] = useState(64);
-    const [allocCount, setAllocCount] = useState(1);
-    const [allocRegion, setAllocRegion] = useState(0);
-    const [selectedSimulation, setSelectedSimulation] = useState('');
-
-    useEffect(() => {
-        setSelectedSimulation(simulation || '');
-    }, [simulation]);
-
-    const handleAllocate = () => {
-        if (currentHeap === 5) {
-            onAllocate(allocSize, allocCount, allocRegion);
-        } else {
-            onAllocate(allocSize, allocCount);
-        }
-    };
-
-    const handleSimulationChange = (event) => {
-        const sim = event.target.value;
-        setSelectedSimulation(sim);
-        onSimulationChange(sim);
-    };
-
-    const speedOptions = [0.5, 1, 1.5, 2, 3, 4];
-
-    return (
-        <Box sx={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: 1, 
-            alignItems: 'center'
-        }}>
-            {/* Heap Selection */}
-            <FormControl size="small" sx={{ minWidth: 100 }}>
-                <InputLabel sx={{ fontSize: '0.75rem' }}>Heap</InputLabel>
-                <Select
-                    value={currentHeap}
-                    onChange={(e) => onHeapChange(e.target.value)}
-                    label="Heap"
-                    sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
-                >
-                    {availableHeaps.map(heap => (
-                        <MenuItem key={heap.type} value={heap.type} disabled={!heap.available}>
-                            Heap {heap.type}
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-            {/* Manual Allocation */}
-            <TextField
-                label="Size"
-                type="number"
-                value={allocSize}
-                onChange={(e) => setAllocSize(parseInt(e.target.value) || 0)}
-                size="small"
-                sx={{ width: 65, '& input': { fontSize: '0.75rem', py: 0.5 }, '& .MuiInputLabel-root': { fontSize: '0.7rem' } }}
-                inputProps={{ min: 1 }}
-            />
-            <TextField
-                label="×"
-                type="number"
-                value={allocCount}
-                onChange={(e) => setAllocCount(parseInt(e.target.value) || 0)}
-                size="small"
-                sx={{ width: 45, '& input': { fontSize: '0.75rem', py: 0.5 }, '& .MuiInputLabel-root': { fontSize: '0.7rem' } }}
-                inputProps={{ min: 1, max: 100 }}
-            />
-            {currentHeap === 5 && (
-                <FormControl size="small" sx={{ minWidth: 70 }}>
-                    <InputLabel sx={{ fontSize: '0.7rem' }}>Rgn</InputLabel>
-                    <Select
-                        value={allocRegion}
-                        onChange={(e) => setAllocRegion(e.target.value)}
-                        label="Rgn"
-                        sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
-                    >
-                        <MenuItem value={0}>FAST</MenuItem>
-                        <MenuItem value={1}>DMA</MenuItem>
-                        <MenuItem value={2}>UNCACHED</MenuItem>
-                        <MenuItem value={255}>Any</MenuItem>
-                    </Select>
-                </FormControl>
-            )}
-            <Button
-                variant="contained"
-                onClick={handleAllocate}
-                disabled={allocSize <= 0 || allocCount <= 0}
-                size="small"
-                sx={{ minWidth: 60, fontSize: '0.7rem', py: 0.5, px: 1 }}
-            >
-                Alloc
-            </Button>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-
-            {/* Simulation */}
-            <FormControl size="small" sx={{ minWidth: 100 }}>
-                <InputLabel sx={{ fontSize: '0.7rem' }}>Sim</InputLabel>
-                <Select
-                    value={selectedSimulation}
-                    onChange={handleSimulationChange}
-                    label="Sim"
-                    sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
-                >
-                    <MenuItem value="">None</MenuItem>
-                    <MenuItem value="basic">Basic</MenuItem>
-                    <MenuItem value="growth">Growth</MenuItem>
-                    <MenuItem value="mixed">Mixed</MenuItem>
-                    <MenuItem value="fragmentation">Fragment</MenuItem>
-                    <MenuItem value="coalescing">Coalesce</MenuItem>
-                    {currentHeap === 5 && <MenuItem value="regionSpecific">Regions</MenuItem>}
-                </Select>
-            </FormControl>
-
-            {/* Playback Controls */}
-            <Stack direction="row" spacing={0} alignItems="center">
-                <Tooltip title="Step Back"><span>
-                    <IconButton onClick={onStepBackward} disabled={currentStep === 0 || !selectedSimulation} size="small" sx={{ p: 0.5 }}>
-                        <SkipPrevious sx={{ fontSize: 18 }} />
-                    </IconButton>
-                </span></Tooltip>
-                <Tooltip title={isPlaying ? "Pause" : "Play"}><span>
-                    <IconButton 
-                        onClick={isPlaying ? onPause : onPlay}
-                        disabled={!selectedSimulation || currentStep >= totalSteps}
-                        size="small"
-                        sx={{ p: 0.5, bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }, mx: 0.25 }}
-                    >
-                        {isPlaying ? <Pause sx={{ fontSize: 16 }} /> : <PlayArrow sx={{ fontSize: 16 }} />}
-                    </IconButton>
-                </span></Tooltip>
-                <Tooltip title="Step Forward"><span>
-                    <IconButton onClick={onStepForward} disabled={currentStep >= totalSteps || !selectedSimulation} size="small" sx={{ p: 0.5 }}>
-                        <SkipNext sx={{ fontSize: 18 }} />
-                    </IconButton>
-                </span></Tooltip>
-                <Tooltip title="Reset">
-                    <IconButton onClick={onReset} size="small" sx={{ p: 0.5 }}>
-                        <Refresh sx={{ fontSize: 18 }} />
-                    </IconButton>
-                </Tooltip>
-            </Stack>
-
-            <FormControl size="small" sx={{ minWidth: 55 }}>
-                <InputLabel sx={{ fontSize: '0.65rem' }}>Spd</InputLabel>
-                <Select
-                    value={playbackSpeed}
-                    onChange={(e) => onSpeedChange(e.target.value)}
-                    label="Spd"
-                    disabled={!selectedSimulation}
-                    sx={{ fontSize: '0.7rem', '& .MuiSelect-select': { py: 0.5 } }}
-                >
-                    {speedOptions.map(speed => (<MenuItem key={speed} value={speed}>{speed}x</MenuItem>))}
-                </Select>
-            </FormControl>
-
-            {selectedSimulation && (
-                <Chip 
-                    label={`${currentStep}/${totalSteps}`}
-                    size="small"
-                    color={currentStep >= totalSteps ? 'success' : 'primary'}
-                    sx={{ fontSize: '0.65rem', height: 20 }}
-                />
-            )}
-        </Box>
-    );
+    0: { border: '#8b5cf6', bg: 'rgba(139,92,246,0.08)', name: 'FAST', description: 'High-speed cache-friendly memory for frequently accessed data' },
+    1: { border: '#d946ef', bg: 'rgba(217,70,239,0.08)', name: 'DMA', description: 'DMA-capable memory for hardware buffer transfers' },
+    2: { border: '#06b6d4', bg: 'rgba(6,182,212,0.08)', name: 'UNCACHED', description: 'Uncached memory for bulk data storage' },
+    // Reserved for future region additions
+    3: { border: '#f97316', bg: 'rgba(249,115,22,0.08)', name: 'REGION3', description: 'Reserved region 3' },
+    4: { border: '#14b8a6', bg: 'rgba(20,184,166,0.08)', name: 'REGION4', description: 'Reserved region 4' },
+    5: { border: '#a855f7', bg: 'rgba(168,85,247,0.08)', name: 'REGION5', description: 'Reserved region 5' }
 };
 
 const MemoryLayout = ({ 
@@ -404,11 +205,14 @@ const MemoryLayout = ({
                 {isHeap5 && (
                     <>
                         <Box sx={{ width: '1px', height: '18px', bgcolor: 'rgba(0,0,0,0.2)', mx: 0.5 }} />
-                        {Object.entries(REGION_COLORS).map(([id, region]) => (
-                            <Tooltip key={id} title={region.description} placement="top" arrow>
-                                <Chip label={region.name} size="small" sx={{ borderColor: region.border, backgroundColor: region.bg, color: region.border, fontWeight: 'bold', cursor: 'help', fontSize: '0.65rem', '&:hover': { backgroundColor: `${region.border}22` } }} variant="outlined" icon={<Info sx={{ fontSize: '10px !important', color: `${region.border} !important`, ml: 0.5 }} />} />
-                            </Tooltip>
-                        ))}
+                        {regionIds.map((id) => {
+                            const region = REGION_COLORS[id];
+                            return (
+                                <Tooltip key={id} title={region.description} placement="top" arrow>
+                                    <Chip label={region.name} size="small" sx={{ borderColor: region.border, backgroundColor: region.bg, color: region.border, fontWeight: 'bold', cursor: 'help', fontSize: '0.65rem', '&:hover': { backgroundColor: `${region.border}22` } }} variant="outlined" icon={<Info sx={{ fontSize: '10px !important', color: `${region.border} !important`, ml: 0.5 }} />} />
+                                </Tooltip>
+                            );
+                        })}
                     </>
                 )}
             </Box>
@@ -507,7 +311,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
     };
 
     const drawRegionLayout = (regionId) => {
-        const regionBlocks = blocksByRegion[regionId] || [];
+        let regionBlocks = blocksByRegion[regionId] || [];
         const svg = d3.select(svgRefs.current[regionId]);
         const currentTransform = transformRefs.current[regionId];
         const isInitialDraw = !currentTransform || currentTransform.k === 1;
@@ -519,8 +323,24 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = regionHeight - margin.top - margin.bottom - borderWidth * 2;
 
+        // Default region sizes for heap 5 when no blocks are present
+        const defaultRegionSizes = { 0: 20480, 1: 28672, 2: 32768 };
+        const defaultSize = defaultRegionSizes[regionId] || 10240;
+
         // Calculate totalSize for this region
-        const totalSize = regionBlocks.length > 0 ? Math.max(...regionBlocks.map(b => b.offset + b.size)) : 10240;
+        const totalSize = regionBlocks.length > 0 ? Math.max(...regionBlocks.map(b => b.offset + b.size)) : defaultSize;
+
+        // If no blocks exist, create a synthetic free block to show the region is initialized
+        if (regionBlocks.length === 0) {
+            regionBlocks = [{
+                offset: 0,
+                size: totalSize,
+                state: 0, // Free
+                allocationId: 0,
+                timestamp: 0,
+                regionId: regionId
+            }];
+        }
 
         const xScale = d3.scaleLinear().domain([0, totalSize]).range([0, innerWidth]);
 
@@ -615,7 +435,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                 .attr('x', d => currentXScale(d.offset))
                 .attr('y', blockInset)
                 .attr('width', d => Math.max(1, currentXScale(d.offset + d.size) - currentXScale(d.offset)))
-                .attr('height', innerHeight - blockInset * 2)
+                .attr('height', innerHeight - blockInset)
                 .attr('fill', d => BLOCK_STATES[d.state]?.color || '#999')
                 .attr('opacity', d => d.state === 0 ? 0.5 : 1.0)
                 .attr('stroke', 'rgba(255,255,255,0.3)')
@@ -642,7 +462,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                     blockGroup.append('rect').datum(sbd).attr('class', 'block-selection-overlay')
                         .attr('x', currentXScale(sbd.offset)).attr('y', blockInset)
                         .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
-                        .attr('height', innerHeight - blockInset * 2)
+                        .attr('height', innerHeight - blockInset)
                         .attr('fill', 'none').attr('stroke', '#000').attr('stroke-width', 3).style('pointer-events', 'none');
                 }
             }
@@ -931,7 +751,7 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 .attr('x', d => currentXScale(d.offset))
                 .attr('y', blockInset)
                 .attr('width', d => Math.max(1, currentXScale(d.offset + d.size) - currentXScale(d.offset)))
-                .attr('height', innerHeight - blockInset * 2)
+                .attr('height', innerHeight - blockInset)
                 .attr('fill', d => BLOCK_STATES[d.state]?.color || '#999')
                 .attr('opacity', d => d.state === 0 ? 0.5 : 1.0)
                 .attr('stroke', 'rgba(255,255,255,0.3)')
@@ -954,7 +774,7 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                     blockGroup.append('rect').datum(sbd).attr('class', 'block-selection-overlay')
                         .attr('x', currentXScale(sbd.offset)).attr('y', blockInset)
                         .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
-                        .attr('height', innerHeight - blockInset * 2)
+                        .attr('height', innerHeight - blockInset)
                         .attr('fill', 'none').attr('stroke', '#000').attr('stroke-width', 3).style('pointer-events', 'none');
                 }
             }

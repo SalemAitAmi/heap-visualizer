@@ -1,14 +1,9 @@
 /**
- * Controls Component - Standalone version
+ * Controls Component
  * 
- * This component is kept as a separate module for potential future use
- * where controls might need to be displayed separately from the memory layout.
- * 
- * Currently, an embedded version is used directly in MemoryLayout.jsx
- * for a more integrated UX.
- * 
- * To use this standalone version, import it and pass the same props
- * that are passed to MemoryLayout's embedded controls.
+ * This module exports both standalone Controls and EmbeddedControls components.
+ * - EmbeddedControls: Compact horizontal layout used inline with the Memory Layout heading
+ * - Controls: Full-featured controls with horizontal/vertical variants
  */
 
 import React, { useState, useEffect } from 'react';
@@ -35,6 +30,198 @@ import {
     Refresh
 } from '@mui/icons-material';
 
+/**
+ * EmbeddedControls - Compact inline controls for use next to headings
+ */
+export const EmbeddedControls = ({
+    availableHeaps,
+    currentHeap,
+    onHeapChange,
+    onAllocate,
+    onSimulationChange,
+    isPlaying,
+    playbackSpeed,
+    onPlay,
+    onPause,
+    onStepForward,
+    onStepBackward,
+    onReset,
+    onSpeedChange,
+    currentStep,
+    totalSteps,
+    simulation
+}) => {
+    const [allocSize, setAllocSize] = useState(64);
+    const [allocCount, setAllocCount] = useState(1);
+    const [allocRegion, setAllocRegion] = useState(0);
+    const [selectedSimulation, setSelectedSimulation] = useState('');
+
+    useEffect(() => {
+        setSelectedSimulation(simulation || '');
+    }, [simulation]);
+
+    const handleAllocate = () => {
+        if (currentHeap === 5) {
+            onAllocate(allocSize, allocCount, allocRegion);
+        } else {
+            onAllocate(allocSize, allocCount);
+        }
+    };
+
+    const handleSimulationChange = (event) => {
+        const sim = event.target.value;
+        setSelectedSimulation(sim);
+        onSimulationChange(sim);
+    };
+
+    const speedOptions = [0.5, 1, 1.5, 2, 3, 4];
+
+    return (
+        <Box sx={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: 1.5, 
+            alignItems: 'center',
+            flex: 1
+        }}>
+            {/* Heap Selection */}
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>Heap</InputLabel>
+                <Select
+                    value={currentHeap}
+                    onChange={(e) => onHeapChange(e.target.value)}
+                    label="Heap"
+                >
+                    {availableHeaps.map(heap => (
+                        <MenuItem key={heap.type} value={heap.type} disabled={!heap.available}>
+                            Heap {heap.type}
+                        </MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+            {/* Manual Allocation */}
+            <TextField
+                label="Size"
+                type="number"
+                value={allocSize}
+                onChange={(e) => setAllocSize(parseInt(e.target.value) || 0)}
+                size="small"
+                sx={{ width: 90 }}
+                inputProps={{ min: 1 }}
+            />
+            <TextField
+                label="Count"
+                type="number"
+                value={allocCount}
+                onChange={(e) => setAllocCount(parseInt(e.target.value) || 0)}
+                size="small"
+                sx={{ width: 80 }}
+                inputProps={{ min: 1, max: 100 }}
+            />
+            {currentHeap === 5 && (
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <InputLabel>Region</InputLabel>
+                    <Select
+                        value={allocRegion}
+                        onChange={(e) => setAllocRegion(e.target.value)}
+                        label="Region"
+                    >
+                        <MenuItem value={0}>FAST</MenuItem>
+                        <MenuItem value={1}>DMA</MenuItem>
+                        <MenuItem value={2}>UNCACHED</MenuItem>
+                        <MenuItem value={255}>Any</MenuItem>
+                    </Select>
+                </FormControl>
+            )}
+            <Button
+                variant="contained"
+                onClick={handleAllocate}
+                disabled={allocSize <= 0 || allocCount <= 0}
+                size="medium"
+                sx={{ minWidth: 80, px: 2 }}
+            >
+                Alloc
+            </Button>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+            {/* Simulation */}
+            <FormControl size="small" sx={{ minWidth: 130 }}>
+                <InputLabel>Simulation</InputLabel>
+                <Select
+                    value={selectedSimulation}
+                    onChange={handleSimulationChange}
+                    label="Simulation"
+                >
+                    <MenuItem value="">None</MenuItem>
+                    <MenuItem value="basic">Basic</MenuItem>
+                    <MenuItem value="growth">Growth</MenuItem>
+                    <MenuItem value="mixed">Mixed</MenuItem>
+                    <MenuItem value="fragmentation">Fragment</MenuItem>
+                    <MenuItem value="coalescing">Coalesce</MenuItem>
+                    {currentHeap === 5 && <MenuItem value="regionSpecific">Regions</MenuItem>}
+                </Select>
+            </FormControl>
+
+            {/* Playback Controls */}
+            <Stack direction="row" spacing={0.5} alignItems="center">
+                <Tooltip title="Step Back"><span>
+                    <IconButton onClick={onStepBackward} disabled={currentStep === 0 || !selectedSimulation} size="medium">
+                        <SkipPrevious />
+                    </IconButton>
+                </span></Tooltip>
+                <Tooltip title={isPlaying ? "Pause" : "Play"}><span>
+                    <IconButton 
+                        onClick={isPlaying ? onPause : onPlay}
+                        disabled={!selectedSimulation || currentStep >= totalSteps}
+                        size="medium"
+                        sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, '&.Mui-disabled': { bgcolor: 'action.disabledBackground' } }}
+                    >
+                        {isPlaying ? <Pause /> : <PlayArrow />}
+                    </IconButton>
+                </span></Tooltip>
+                <Tooltip title="Step Forward"><span>
+                    <IconButton onClick={onStepForward} disabled={currentStep >= totalSteps || !selectedSimulation} size="medium">
+                        <SkipNext />
+                    </IconButton>
+                </span></Tooltip>
+                <Tooltip title="Reset">
+                    <IconButton onClick={onReset} size="medium">
+                        <Refresh />
+                    </IconButton>
+                </Tooltip>
+            </Stack>
+
+            <FormControl size="small" sx={{ minWidth: 80 }}>
+                <InputLabel>Speed</InputLabel>
+                <Select
+                    value={playbackSpeed}
+                    onChange={(e) => onSpeedChange(e.target.value)}
+                    label="Speed"
+                    disabled={!selectedSimulation}
+                >
+                    {speedOptions.map(speed => (<MenuItem key={speed} value={speed}>{speed}x</MenuItem>))}
+                </Select>
+            </FormControl>
+
+            {selectedSimulation && (
+                <Chip 
+                    label={`${currentStep}/${totalSteps}`}
+                    size="small"
+                    color={currentStep >= totalSteps ? 'success' : 'primary'}
+                    sx={{ height: 24 }}
+                />
+            )}
+        </Box>
+    );
+};
+
+/**
+ * Controls - Full-featured controls component with horizontal/vertical variants
+ */
 const Controls = ({
     availableHeaps,
     currentHeap,

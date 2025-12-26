@@ -22,9 +22,14 @@ const Log = ({ logs, currentHeap }) => {
         }
     };
 
-    const getRegionColor = (regionId) => {
-        const colors = ['primary', 'secondary', 'info'];
-        return colors[regionId] || 'default';
+    // Region colors matching the purple/magenta/cyan theme from MemoryLayout
+    const getRegionChipStyle = (regionId) => {
+        const regionStyles = {
+            0: { borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', color: '#8b5cf6' },
+            1: { borderColor: '#d946ef', backgroundColor: 'rgba(217,70,239,0.1)', color: '#d946ef' },
+            2: { borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.1)', color: '#06b6d4' }
+        };
+        return regionStyles[regionId] || { borderColor: 'grey', backgroundColor: 'rgba(128,128,128,0.1)', color: 'grey' };
     };
 
     const formatLogEntry = (log) => {
@@ -106,9 +111,13 @@ const Log = ({ logs, currentHeap }) => {
                                             <Chip
                                                 label={log.regionName}
                                                 size="small"
-                                                color={getRegionColor(log.regionId)}
                                                 variant="outlined"
-                                                sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.5 } }}
+                                                sx={{ 
+                                                    height: 16, 
+                                                    fontSize: '0.6rem', 
+                                                    '& .MuiChip-label': { px: 0.5 },
+                                                    ...getRegionChipStyle(log.regionId)
+                                                }}
                                             />
                                         )}
                                         

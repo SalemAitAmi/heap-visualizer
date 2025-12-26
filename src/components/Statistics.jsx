@@ -129,37 +129,36 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
         <Box sx={{ 
             display: 'flex', 
             flexWrap: 'wrap', 
-            gap: 1.5, 
+            gap: 2, 
             alignItems: 'center',
-            justifyContent: 'space-between',
-            p: 1,
+            p: 1.5,
             background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(249,250,251,0.95) 100%)',
             borderRadius: 2,
             border: '1px solid',
             borderColor: 'divider'
         }}>
             {/* Heap Type Chip */}
-            <Tooltip title={<Box sx={{ whiteSpace: 'pre-line', maxWidth: 350, fontSize: '0.8rem' }}>{heapInfo.description}</Box>} placement="bottom" arrow>
+            <Tooltip title={<Box sx={{ whiteSpace: 'pre-line', maxWidth: 350, fontSize: '0.85rem' }}>{heapInfo.description}</Box>} placement="bottom" arrow>
                 <Chip
                     label={heapInfo.label}
-                    size="small"
+                    size="medium"
                     color="primary"
                     variant="outlined"
-                    sx={{ fontWeight: 'bold', cursor: 'help', fontSize: '0.7rem' }}
+                    sx={{ fontWeight: 'bold', cursor: 'help', fontSize: '0.85rem', height: 32 }}
                 />
             </Tooltip>
 
             {/* Region Selector for heap_5 */}
             {showRegionSelector && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <LayersIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                    <FormControl size="small" sx={{ minWidth: 80 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LayersIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                    <FormControl size="small" sx={{ minWidth: 110 }}>
                         <Select
                             value={selectedRegion}
                             onChange={(e) => setSelectedRegion(e.target.value)}
-                            sx={{ fontSize: '0.7rem', '& .MuiSelect-select': { py: 0.25, px: 1 } }}
+                            sx={{ fontSize: '0.85rem' }}
                         >
-                            <MenuItem value="all">All</MenuItem>
+                            <MenuItem value="all">All Regions</MenuItem>
                             <MenuItem value={0}>FAST</MenuItem>
                             <MenuItem value={1}>DMA</MenuItem>
                             <MenuItem value={2}>UNCACHED</MenuItem>
@@ -168,42 +167,42 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
                 </Box>
             )}
 
-            {/* Memory Usage */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 200, maxWidth: 350 }}>
-                <MemoryIcon sx={{ fontSize: 16, color: 'primary.main', flexShrink: 0 }} />
+            {/* Memory Usage - expanded to use more space */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: '1 1 auto', minWidth: 280 }}>
+                <MemoryIcon sx={{ fontSize: 22, color: 'primary.main', flexShrink: 0 }} />
                 <Box sx={{ flex: 1 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="baseline">
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>Allocated</Typography>
-                        <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.65rem' }}>{formatBytes(allocatedBytes)} ({allocatedPercent.toFixed(0)}%)</Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={0.25}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>Allocated</Typography>
+                        <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.85rem' }}>{formatBytes(allocatedBytes)} ({allocatedPercent.toFixed(0)}%)</Typography>
                     </Box>
                     <LinearProgress variant="determinate" value={allocatedPercent}
-                        sx={{ height: 3, borderRadius: 1.5, backgroundColor: 'rgba(239,68,68,0.1)', '& .MuiLinearProgress-bar': { backgroundColor: '#ef4444', borderRadius: 1.5 } }} />
+                        sx={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(239,68,68,0.15)', '& .MuiLinearProgress-bar': { backgroundColor: '#ef4444', borderRadius: 3 } }} />
                 </Box>
                 <Box sx={{ flex: 1 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="baseline">
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>Free</Typography>
-                        <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.65rem' }}>{formatBytes(freeBytes)} ({freePercent.toFixed(0)}%)</Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={0.25}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>Free</Typography>
+                        <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.85rem' }}>{formatBytes(freeBytes)} ({freePercent.toFixed(0)}%)</Typography>
                     </Box>
                     <LinearProgress variant="determinate" value={freePercent}
-                        sx={{ height: 3, borderRadius: 1.5, backgroundColor: 'rgba(16,185,129,0.1)', '& .MuiLinearProgress-bar': { backgroundColor: '#10b981', borderRadius: 1.5 } }} />
+                        sx={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(16,185,129,0.15)', '& .MuiLinearProgress-bar': { backgroundColor: '#10b981', borderRadius: 3 } }} />
                 </Box>
             </Box>
 
             {/* Block Stats */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <StorageIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                <Chip label={`${allocationCount} alloc`} size="small" sx={{ bgcolor: 'rgba(99,102,241,0.1)', color: 'primary.main', fontWeight: 'bold', fontSize: '0.6rem', height: 20 }} />
-                <Chip label={`${freeBlockCount} free`} size="small" sx={{ bgcolor: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 'bold', fontSize: '0.6rem', height: 20 }} />
-                <Chip label={formatBytes(totalSize)} size="small" sx={{ bgcolor: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontWeight: 'bold', fontSize: '0.6rem', height: 20 }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <StorageIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                <Chip label={`${allocationCount} alloc`} size="small" sx={{ bgcolor: 'rgba(99,102,241,0.12)', color: 'primary.main', fontWeight: 'bold', fontSize: '0.8rem', height: 26 }} />
+                <Chip label={`${freeBlockCount} free`} size="small" sx={{ bgcolor: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 'bold', fontSize: '0.8rem', height: 26 }} />
+                <Chip label={formatBytes(totalSize)} size="small" sx={{ bgcolor: 'rgba(59,130,246,0.12)', color: '#3b82f6', fontWeight: 'bold', fontSize: '0.8rem', height: 26 }} />
             </Box>
 
             {/* Additional Stats */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', whiteSpace: 'nowrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                     Largest: <strong>{formatBytes(largestFreeBlock)}</strong>
                 </Typography>
                 {showMinHistoric && (
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                         Min: <strong>{formatBytes(minFreeBytes)}</strong>
                     </Typography>
                 )}
@@ -211,23 +210,23 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
 
             {/* Fragmentation */}
             {showFragmentation && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FragmentIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <FragmentIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Tooltip title={externalFragTooltip} placement="top" arrow>
-                            <IconButton size="small" sx={{ p: 0 }}><HelpIcon sx={{ fontSize: 10, color: 'text.secondary' }} /></IconButton>
+                            <IconButton size="small" sx={{ p: 0.25 }}><HelpIcon sx={{ fontSize: 14, color: 'text.secondary' }} /></IconButton>
                         </Tooltip>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.55rem' }}>Ext:</Typography>
-                        <Typography variant="caption" fontWeight="bold" sx={{ color: getFragColor(externalFragmentation), fontSize: '0.7rem' }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>Ext:</Typography>
+                        <Typography variant="body2" fontWeight="bold" sx={{ color: getFragColor(externalFragmentation), fontSize: '0.9rem' }}>
                             {externalFragmentation.toFixed(0)}%
                         </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Tooltip title={internalFragTooltip} placement="top" arrow>
-                            <IconButton size="small" sx={{ p: 0 }}><HelpIcon sx={{ fontSize: 10, color: 'text.secondary' }} /></IconButton>
+                            <IconButton size="small" sx={{ p: 0.25 }}><HelpIcon sx={{ fontSize: 14, color: 'text.secondary' }} /></IconButton>
                         </Tooltip>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.55rem' }}>Int:</Typography>
-                        <Typography variant="caption" fontWeight="bold" sx={{ color: getFragColor(internalFragmentation), fontSize: '0.7rem' }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>Int:</Typography>
+                        <Typography variant="body2" fontWeight="bold" sx={{ color: getFragColor(internalFragmentation), fontSize: '0.9rem' }}>
                             {internalFragmentation.toFixed(0)}%
                         </Typography>
                     </Box>
