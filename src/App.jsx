@@ -7,11 +7,10 @@ import Log from './components/Log';
 import HeapModule from './js/heap_module';
 import { getSimulations } from './utils/simulations';
 
-const HEAP_SIZE = 32768; // 32KB for visualization
+const HEAP_SIZE = 32768;
 
-// Common paper styles
 const paperStyles = {
-    p: 2,
+    p: 1.5,
     border: '1px solid',
     borderColor: 'divider',
     borderRadius: 2,
@@ -33,7 +32,6 @@ function App() {
     const [activeBlock, setActiveBlock] = useState(null);
     const [resetZoom, setResetZoom] = useState(false);
     
-    // Playback state
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
     const [currentStep, setCurrentStep] = useState(0);
@@ -47,15 +45,10 @@ function App() {
 
     const refreshData = useCallback(() => {
         if (!heapModule || !heapModule.initialized) return;
-        
         try {
-            const newStats = heapModule.getStats();
-            const newBlocks = heapModule.getBlocks();
-            const newLogs = heapModule.getLogs();
-            
-            setStats(newStats || {});
-            setBlocks(newBlocks || []);
-            setLogs(newLogs || []);
+            setStats(heapModule.getStats() || {});
+            setBlocks(heapModule.getBlocks() || []);
+            setLogs(heapModule.getLogs() || []);
         } catch (error) {
             console.error('Failed to refresh data:', error);
         }
@@ -67,10 +60,8 @@ function App() {
                 await heapModule.init();
                 const heaps = heapModule.getAvailableHeaps();
                 setAvailableHeaps(heaps);
-                
                 heapModule.switchHeap(1);
                 heapModule.initHeap(HEAP_SIZE);
-                
                 setStats(heapModule.getStats() || {});
                 setBlocks(heapModule.getBlocks() || []);
                 setLogs(heapModule.getLogs() || []);
@@ -101,6 +92,8 @@ function App() {
         setAllocatedPointers([]);
         setPointerBlockMap(new Map());
         setActiveBlock(null);
+        setSimulation(null);
+        setSimulationSteps([]);
         setResetZoom(true);
         refreshData();
     };
@@ -306,9 +299,7 @@ function App() {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
                 <Paper sx={{ p: 4, borderRadius: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                        Loading Heap Visualizer...
-                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>Loading...</Typography>
                 </Paper>
             </Box>
         );
@@ -318,52 +309,33 @@ function App() {
 
     return (
         <Fade in={initialized}>
-            <Box className="app" sx={{ p: { xs: 1.5, md: 2 }, minHeight: '100vh' }}>
+            <Box className="app" sx={{ p: { xs: 1, md: 1.5 }, minHeight: '100vh' }}>
                 {/* Compact Header */}
                 <Box sx={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 1.5,
-                    mb: 2,
-                    py: 1.5,
-                    px: 2,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                    mb: 1.5, py: 1, px: 2,
                     background: 'linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(236,72,153,0.05) 100%)',
-                    borderRadius: 2,
-                    border: '1px solid rgba(99,102,241,0.1)'
+                    borderRadius: 2, border: '1px solid rgba(99,102,241,0.1)'
                 }}>
-                    <CodeIcon sx={{ fontSize: 28, color: 'primary.main' }} />
-                    <Typography 
-                        variant="h5" 
-                        sx={{ 
-                            background: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            fontWeight: 700
-                        }}
-                    >
+                    <CodeIcon sx={{ fontSize: 24, color: 'primary.main' }} />
+                    <Typography variant="h6" sx={{ 
+                        background: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
+                        backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700
+                    }}>
                         Heap Memory Visualizer
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', ml: 1 }}>
-                        {heapInfo.name}
-                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', ml: 1 }}>{heapInfo.name}</Typography>
                 </Box>
                 
-                <Grid container spacing={1.5}>
-                    {/* Statistics - Full Width, Flat */}
+                <Grid container spacing={1}>
+                    {/* Statistics */}
                     <Grid item xs={12}>
-                        <Statistics 
-                            stats={stats} 
-                            currentHeap={currentHeap}
-                            blocks={blocks}
-                            heapModule={heapModule}
-                        />
+                        <Statistics stats={stats} currentHeap={currentHeap} blocks={blocks} heapModule={heapModule} />
                     </Grid>
 
-                    {/* Memory Layout with Embedded Controls */}
+                    {/* Memory Layout */}
                     <Grid item xs={12}>
-                        <Paper elevation={0} sx={{ ...paperStyles, minHeight: currentHeap === 5 ? 700 : 400 }}>
+                        <Paper elevation={0} sx={{ ...paperStyles, minHeight: currentHeap === 5 ? 620 : 350 }}>
                             <MemoryLayout
                                 blocks={blocks}
                                 totalSize={stats.totalSize || HEAP_SIZE}
@@ -372,7 +344,6 @@ function App() {
                                 onBlockClick={setActiveBlock}
                                 resetZoom={resetZoom}
                                 onFreeBlock={handleFreeBlock}
-                                // Control props
                                 availableHeaps={availableHeaps}
                                 currentHeap={currentHeap}
                                 onHeapChange={handleHeapChange}
@@ -393,10 +364,10 @@ function App() {
                         </Paper>
                     </Grid>
 
-                    {/* Execution Log */}
+                    {/* Log */}
                     <Grid item xs={12}>
-                        <Paper elevation={0} sx={{ ...paperStyles, minHeight: 200, maxHeight: 280 }}>
-                            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'text.primary', flexShrink: 0 }}>
+                        <Paper elevation={0} sx={{ ...paperStyles, height: 180 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary', flexShrink: 0, mb: 0.5, fontSize: '0.8rem' }}>
                                 Execution Log
                             </Typography>
                             <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
     Box, 
     Typography, 
@@ -32,7 +32,7 @@ const BLOCK_STATES = {
 
 const REGION_COLORS = {
     0: { border: '#6366f1', bg: 'rgba(99,102,241,0.05)', name: 'FAST', description: 'High-speed cache-friendly memory for frequently accessed data' },
-    1: { border: '#ec4899', bg: 'rgba(236,72,153,0.05)', name: 'DMA', description: 'DMA-capable memory for hardware buffer transfers' },
+    1: { border: '#10b981', bg: 'rgba(16,185,129,0.05)', name: 'DMA', description: 'DMA-capable memory for hardware buffer transfers' },
     2: { border: '#3b82f6', bg: 'rgba(59,130,246,0.05)', name: 'UNCACHED', description: 'Uncached memory for bulk data storage' }
 };
 
@@ -84,22 +84,17 @@ const EmbeddedControls = ({
         <Box sx={{ 
             display: 'flex', 
             flexWrap: 'wrap', 
-            gap: 1.5, 
-            alignItems: 'center',
-            p: 1.5,
-            background: 'rgba(0,0,0,0.02)',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider'
+            gap: 1, 
+            alignItems: 'center'
         }}>
             {/* Heap Selection */}
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-                <InputLabel sx={{ fontSize: '0.8rem' }}>Heap</InputLabel>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+                <InputLabel sx={{ fontSize: '0.75rem' }}>Heap</InputLabel>
                 <Select
                     value={currentHeap}
                     onChange={(e) => onHeapChange(e.target.value)}
                     label="Heap"
-                    sx={{ fontSize: '0.8rem' }}
+                    sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
                 >
                     {availableHeaps.map(heap => (
                         <MenuItem key={heap.type} value={heap.type} disabled={!heap.available}>
@@ -109,136 +104,113 @@ const EmbeddedControls = ({
                 </Select>
             </FormControl>
 
-            <Divider orientation="vertical" flexItem />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
             {/* Manual Allocation */}
-            <Stack direction="row" spacing={0.5} alignItems="center">
-                <TextField
-                    label="Size"
-                    type="number"
-                    value={allocSize}
-                    onChange={(e) => setAllocSize(parseInt(e.target.value) || 0)}
-                    size="small"
-                    sx={{ width: 70, '& input': { fontSize: '0.8rem' } }}
-                    inputProps={{ min: 1 }}
-                />
-                <TextField
-                    label="Count"
-                    type="number"
-                    value={allocCount}
-                    onChange={(e) => setAllocCount(parseInt(e.target.value) || 0)}
-                    size="small"
-                    sx={{ width: 60, '& input': { fontSize: '0.8rem' } }}
-                    inputProps={{ min: 1, max: 100 }}
-                />
-                {currentHeap === 5 && (
-                    <FormControl size="small" sx={{ minWidth: 80 }}>
-                        <InputLabel sx={{ fontSize: '0.75rem' }}>Region</InputLabel>
-                        <Select
-                            value={allocRegion}
-                            onChange={(e) => setAllocRegion(e.target.value)}
-                            label="Region"
-                            sx={{ fontSize: '0.8rem' }}
-                        >
-                            <MenuItem value={0}>FAST</MenuItem>
-                            <MenuItem value={1}>DMA</MenuItem>
-                            <MenuItem value={2}>UNCACHED</MenuItem>
-                            <MenuItem value={255}>Any</MenuItem>
-                        </Select>
-                    </FormControl>
-                )}
-                <Button
-                    variant="contained"
-                    onClick={handleAllocate}
-                    disabled={allocSize <= 0 || allocCount <= 0}
-                    size="small"
-                    sx={{ minWidth: 70, fontSize: '0.75rem', py: 0.75 }}
-                >
-                    Allocate
-                </Button>
-            </Stack>
+            <TextField
+                label="Size"
+                type="number"
+                value={allocSize}
+                onChange={(e) => setAllocSize(parseInt(e.target.value) || 0)}
+                size="small"
+                sx={{ width: 65, '& input': { fontSize: '0.75rem', py: 0.5 }, '& .MuiInputLabel-root': { fontSize: '0.7rem' } }}
+                inputProps={{ min: 1 }}
+            />
+            <TextField
+                label="×"
+                type="number"
+                value={allocCount}
+                onChange={(e) => setAllocCount(parseInt(e.target.value) || 0)}
+                size="small"
+                sx={{ width: 45, '& input': { fontSize: '0.75rem', py: 0.5 }, '& .MuiInputLabel-root': { fontSize: '0.7rem' } }}
+                inputProps={{ min: 1, max: 100 }}
+            />
+            {currentHeap === 5 && (
+                <FormControl size="small" sx={{ minWidth: 70 }}>
+                    <InputLabel sx={{ fontSize: '0.7rem' }}>Rgn</InputLabel>
+                    <Select
+                        value={allocRegion}
+                        onChange={(e) => setAllocRegion(e.target.value)}
+                        label="Rgn"
+                        sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
+                    >
+                        <MenuItem value={0}>FAST</MenuItem>
+                        <MenuItem value={1}>DMA</MenuItem>
+                        <MenuItem value={2}>UNCACHED</MenuItem>
+                        <MenuItem value={255}>Any</MenuItem>
+                    </Select>
+                </FormControl>
+            )}
+            <Button
+                variant="contained"
+                onClick={handleAllocate}
+                disabled={allocSize <= 0 || allocCount <= 0}
+                size="small"
+                sx={{ minWidth: 60, fontSize: '0.7rem', py: 0.5, px: 1 }}
+            >
+                Alloc
+            </Button>
 
-            <Divider orientation="vertical" flexItem />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
             {/* Simulation */}
-            <FormControl size="small" sx={{ minWidth: 130 }}>
-                <InputLabel sx={{ fontSize: '0.8rem' }}>Simulation</InputLabel>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+                <InputLabel sx={{ fontSize: '0.7rem' }}>Sim</InputLabel>
                 <Select
                     value={selectedSimulation}
                     onChange={handleSimulationChange}
-                    label="Simulation"
-                    sx={{ fontSize: '0.8rem' }}
+                    label="Sim"
+                    sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
                 >
                     <MenuItem value="">None</MenuItem>
                     <MenuItem value="basic">Basic</MenuItem>
                     <MenuItem value="growth">Growth</MenuItem>
                     <MenuItem value="mixed">Mixed</MenuItem>
-                    <MenuItem value="fragmentation">Fragmentation</MenuItem>
-                    <MenuItem value="coalescing">Coalescing</MenuItem>
+                    <MenuItem value="fragmentation">Fragment</MenuItem>
+                    <MenuItem value="coalescing">Coalesce</MenuItem>
                     {currentHeap === 5 && <MenuItem value="regionSpecific">Regions</MenuItem>}
                 </Select>
             </FormControl>
 
             {/* Playback Controls */}
-            <Stack direction="row" spacing={0.25} alignItems="center">
-                <Tooltip title="Step Backward">
-                    <span>
-                        <IconButton 
-                            onClick={onStepBackward} 
-                            disabled={currentStep === 0 || !selectedSimulation} 
-                            size="small"
-                        >
-                            <SkipPrevious fontSize="small" />
-                        </IconButton>
-                    </span>
-                </Tooltip>
-                <Tooltip title={isPlaying ? "Pause" : "Play"}>
-                    <span>
-                        <IconButton 
-                            onClick={isPlaying ? onPause : onPlay}
-                            disabled={!selectedSimulation || currentStep >= totalSteps}
-                            size="small"
-                            sx={{ 
-                                bgcolor: 'primary.main',
-                                color: 'white',
-                                '&:hover': { bgcolor: 'primary.dark' },
-                                '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
-                            }}
-                        >
-                            {isPlaying ? <Pause fontSize="small" /> : <PlayArrow fontSize="small" />}
-                        </IconButton>
-                    </span>
-                </Tooltip>
-                <Tooltip title="Step Forward">
-                    <span>
-                        <IconButton 
-                            onClick={onStepForward}
-                            disabled={currentStep >= totalSteps || !selectedSimulation}
-                            size="small"
-                        >
-                            <SkipNext fontSize="small" />
-                        </IconButton>
-                    </span>
-                </Tooltip>
+            <Stack direction="row" spacing={0} alignItems="center">
+                <Tooltip title="Step Back"><span>
+                    <IconButton onClick={onStepBackward} disabled={currentStep === 0 || !selectedSimulation} size="small" sx={{ p: 0.5 }}>
+                        <SkipPrevious sx={{ fontSize: 18 }} />
+                    </IconButton>
+                </span></Tooltip>
+                <Tooltip title={isPlaying ? "Pause" : "Play"}><span>
+                    <IconButton 
+                        onClick={isPlaying ? onPause : onPlay}
+                        disabled={!selectedSimulation || currentStep >= totalSteps}
+                        size="small"
+                        sx={{ p: 0.5, bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }, mx: 0.25 }}
+                    >
+                        {isPlaying ? <Pause sx={{ fontSize: 16 }} /> : <PlayArrow sx={{ fontSize: 16 }} />}
+                    </IconButton>
+                </span></Tooltip>
+                <Tooltip title="Step Forward"><span>
+                    <IconButton onClick={onStepForward} disabled={currentStep >= totalSteps || !selectedSimulation} size="small" sx={{ p: 0.5 }}>
+                        <SkipNext sx={{ fontSize: 18 }} />
+                    </IconButton>
+                </span></Tooltip>
                 <Tooltip title="Reset">
-                    <IconButton onClick={onReset} size="small">
-                        <Refresh fontSize="small" />
+                    <IconButton onClick={onReset} size="small" sx={{ p: 0.5 }}>
+                        <Refresh sx={{ fontSize: 18 }} />
                     </IconButton>
                 </Tooltip>
             </Stack>
 
-            <FormControl size="small" sx={{ minWidth: 60 }}>
-                <InputLabel sx={{ fontSize: '0.7rem' }}>Speed</InputLabel>
+            <FormControl size="small" sx={{ minWidth: 55 }}>
+                <InputLabel sx={{ fontSize: '0.65rem' }}>Spd</InputLabel>
                 <Select
                     value={playbackSpeed}
                     onChange={(e) => onSpeedChange(e.target.value)}
-                    label="Speed"
+                    label="Spd"
                     disabled={!selectedSimulation}
-                    sx={{ fontSize: '0.75rem' }}
+                    sx={{ fontSize: '0.7rem', '& .MuiSelect-select': { py: 0.5 } }}
                 >
-                    {speedOptions.map(speed => (
-                        <MenuItem key={speed} value={speed}>{speed}x</MenuItem>
-                    ))}
+                    {speedOptions.map(speed => (<MenuItem key={speed} value={speed}>{speed}x</MenuItem>))}
                 </Select>
             </FormControl>
 
@@ -247,7 +219,7 @@ const EmbeddedControls = ({
                     label={`${currentStep}/${totalSteps}`}
                     size="small"
                     color={currentStep >= totalSteps ? 'success' : 'primary'}
-                    sx={{ fontSize: '0.7rem', height: 24 }}
+                    sx={{ fontSize: '0.65rem', height: 20 }}
                 />
             )}
         </Box>
@@ -262,7 +234,6 @@ const MemoryLayout = ({
     onBlockClick, 
     resetZoom, 
     onFreeBlock,
-    // Control props
     availableHeaps,
     currentHeap,
     onHeapChange,
@@ -286,54 +257,41 @@ const MemoryLayout = ({
     const tooltipRef = useRef(null);
     const hoverTooltipRef = useRef(null);
 
-    const isHeap5 = blocks.some(b => b.regionId !== undefined && b.regionId > 0);
+    // Use currentHeap prop to determine if it's heap 5, not block data
+    const isHeap5 = currentHeap === 5;
     
     const blocksByRegion = isHeap5 ? blocks.reduce((acc, block) => {
-        const regionId = block.regionId || 0;
+        const regionId = block.regionId !== undefined ? block.regionId : 0;
         if (!acc[regionId]) acc[regionId] = [];
         acc[regionId].push(block);
         return acc;
     }, {}) : { 0: blocks };
 
-    const regionIds = Object.keys(blocksByRegion).map(Number).sort();
+    // For heap 5, always show all 3 regions
+    const regionIds = isHeap5 ? [0, 1, 2] : [0];
 
     useEffect(() => {
         const handleResize = () => {
             if (containerRef.current) {
                 const { clientWidth } = containerRef.current;
-                const height = isHeap5 ? 550 : 280;
-                
-                setDim({ 
-                    width: clientWidth - 40, 
-                    height: height
-                });
+                const height = isHeap5 ? 520 : 260;
+                setDim({ width: clientWidth - 40, height: height });
             }
         };
-
         window.addEventListener('resize', handleResize);
         handleResize();
-
         return () => window.removeEventListener('resize', handleResize);
     }, [isHeap5]);
 
     useEffect(() => {
         return () => {
-            if (tooltipRef.current) {
-                tooltipRef.current.remove();
-                tooltipRef.current = null;
-            }
-            if (hoverTooltipRef.current) {
-                hoverTooltipRef.current.remove();
-                hoverTooltipRef.current = null;
-            }
+            if (tooltipRef.current) { tooltipRef.current.remove(); tooltipRef.current = null; }
+            if (hoverTooltipRef.current) { hoverTooltipRef.current.remove(); hoverTooltipRef.current = null; }
         };
     }, []);
 
     useEffect(() => {
-        if (!selectedBlock && tooltipRef.current) {
-            tooltipRef.current.remove();
-            tooltipRef.current = null;
-        }
+        if (!selectedBlock && tooltipRef.current) { tooltipRef.current.remove(); tooltipRef.current = null; }
     }, [selectedBlock]);
 
     useEffect(() => {
@@ -346,10 +304,7 @@ const MemoryLayout = ({
             if (!stillExists) {
                 setSelectedBlock(null);
                 onBlockClick(null);
-                if (tooltipRef.current) {
-                    tooltipRef.current.remove();
-                    tooltipRef.current = null;
-                }
+                if (tooltipRef.current) { tooltipRef.current.remove(); tooltipRef.current = null; }
             }
         }
     }, [blocks, selectedBlock, onBlockClick]);
@@ -371,23 +326,22 @@ const MemoryLayout = ({
     };
 
     const instructionText = isHeap5
-        ? `Each region shown separately. Mouse wheel to zoom, click and drag to pan. Click blocks to select them.`
-        : `Mouse wheel to zoom, click and drag to pan. Click blocks to select them.`;
+        ? `Each region shown separately. Mouse wheel to zoom, drag to pan. Click blocks to select.`
+        : `Mouse wheel to zoom, drag to pan. Click blocks to select.`;
 
     return (
         <Box ref={containerRef} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Header with Controls */}
-            <Box sx={{ mb: 1.5 }}>
-                <Box display="flex" alignItems="center" gap={1} mb={1}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Memory Layout</Typography>
+            {/* Header Row with Title and Controls */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexWrap: 'wrap' }}>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Memory Layout</Typography>
                     <Tooltip title={instructionText} placement="top" arrow>
-                        <IconButton size="small" sx={{ color: 'text.secondary' }}>
-                            <Info fontSize="small" />
+                        <IconButton size="small" sx={{ color: 'text.secondary', p: 0.25 }}>
+                            <Info sx={{ fontSize: 16 }} />
                         </IconButton>
                     </Tooltip>
                 </Box>
                 
-                {/* Embedded Controls */}
                 {availableHeaps && (
                     <EmbeddedControls
                         availableHeaps={availableHeaps}
@@ -411,13 +365,7 @@ const MemoryLayout = ({
             </Box>
 
             {/* Graph Area */}
-            <Box sx={{ 
-                flex: 1,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-            }}>
+            <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {isHeap5 ? (
                     <Heap5Layout
                         blocksByRegion={blocksByRegion}
@@ -449,50 +397,16 @@ const MemoryLayout = ({
             </Box>
 
             {/* Legend */}
-            <Box 
-                display="flex" 
-                gap={1} 
-                mt={1.5} 
-                pt={1.5} 
-                borderTop="1px solid rgba(0,0,0,0.1)" 
-                flexWrap="wrap" 
-                justifyContent="center"
-                alignItems="center"
-            >
+            <Box display="flex" gap={0.75} mt={1} pt={1} borderTop="1px solid rgba(0,0,0,0.1)" flexWrap="wrap" justifyContent="center" alignItems="center">
                 {Object.values(BLOCK_STATES).map(state => (
-                    <Chip
-                        key={state.name}
-                        label={state.label}
-                        sx={{
-                            backgroundColor: state.color,
-                            color: 'white',
-                            opacity: state.name === 'Free' ? 0.7 : 1,
-                            '& .MuiChip-label': { fontWeight: 'bold', fontSize: '0.75rem' }
-                        }}
-                        size="small"
-                    />
+                    <Chip key={state.name} label={state.label} sx={{ backgroundColor: state.color, color: 'white', opacity: state.name === 'Free' ? 0.7 : 1, '& .MuiChip-label': { fontWeight: 'bold', fontSize: '0.7rem' } }} size="small" />
                 ))}
-                
                 {isHeap5 && (
                     <>
-                        <Box sx={{ width: '1px', height: '20px', bgcolor: 'rgba(0,0,0,0.2)', mx: 1 }} />
+                        <Box sx={{ width: '1px', height: '18px', bgcolor: 'rgba(0,0,0,0.2)', mx: 0.5 }} />
                         {Object.entries(REGION_COLORS).map(([id, region]) => (
                             <Tooltip key={id} title={region.description} placement="top" arrow>
-                                <Chip
-                                    label={region.name}
-                                    size="small"
-                                    sx={{
-                                        borderColor: region.border,
-                                        backgroundColor: region.bg,
-                                        color: region.border,
-                                        fontWeight: 'bold',
-                                        cursor: 'help',
-                                        fontSize: '0.7rem',
-                                        '&:hover': { backgroundColor: `${region.border}22` }
-                                    }}
-                                    variant="outlined"
-                                    icon={<Info sx={{ fontSize: '12px !important', color: `${region.border} !important`, ml: 0.5 }} />}
-                                />
+                                <Chip label={region.name} size="small" sx={{ borderColor: region.border, backgroundColor: region.bg, color: region.border, fontWeight: 'bold', cursor: 'help', fontSize: '0.65rem', '&:hover': { backgroundColor: `${region.border}22` } }} variant="outlined" icon={<Info sx={{ fontSize: '10px !important', color: `${region.border} !important`, ml: 0.5 }} />} />
                             </Tooltip>
                         ))}
                     </>
@@ -509,8 +423,9 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
     const lastZoomLevelRef = useRef({});
 
     const regionNames = ['FAST', 'DMA', 'UNCACHED'];
-    const totalRegionHeight = dimensions.height - 40;
-    const regionHeight = Math.floor((totalRegionHeight - 20) / 3);
+    const totalRegionHeight = dimensions.height - 30;
+    const regionHeight = Math.floor((totalRegionHeight - 16) / 3);
+    const borderWidth = 2;
 
     useEffect(() => {
         if (resetZoom) {
@@ -519,33 +434,20 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                     const svg = d3.select(svgRefs.current[regionId]);
                     transformRefs.current[regionId] = d3.zoomIdentity;
                     lastZoomLevelRef.current[regionId] = 1;
-                    svg.transition().duration(300).call(
-                        zoomRefs.current[regionId].transform,
-                        d3.zoomIdentity
-                    );
+                    svg.transition().duration(300).call(zoomRefs.current[regionId].transform, d3.zoomIdentity);
                 }
             });
         }
     }, [resetZoom, regionIds]);
 
     useEffect(() => {
-        regionIds.forEach(regionId => {
-            drawRegionLayout(regionId);
-        });
+        regionIds.forEach(regionId => drawRegionLayout(regionId));
     }, [blocksByRegion, dimensions, regionIds, selectedBlock]);
 
-    const hideHoverTooltip = () => {
-        if (hoverTooltipRef.current) {
-            hoverTooltipRef.current.remove();
-            hoverTooltipRef.current = null;
-        }
-    };
+    const hideHoverTooltip = () => { if (hoverTooltipRef.current) { hoverTooltipRef.current.remove(); hoverTooltipRef.current = null; } };
 
     const showHoverTooltip = (event, block) => {
-        if (selectedBlock && selectedBlock.offset === block.offset && selectedBlock.regionId === block.regionId) {
-            return;
-        }
-
+        if (selectedBlock && selectedBlock.offset === block.offset && selectedBlock.regionId === block.regionId) return;
         hideHoverTooltip();
 
         const stateName = BLOCK_STATES[block.state]?.name || 'Unknown';
@@ -554,40 +456,22 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
 
         hoverTooltipRef.current = d3.select('body').append('div')
             .attr('class', 'memory-tooltip-hover')
-            .style('position', 'absolute')
-            .style('background', 'rgba(0, 0, 0, 0.9)')
-            .style('color', 'white')
-            .style('padding', '10px')
-            .style('border-radius', '6px')
-            .style('font-size', '12px')
-            .style('pointer-events', 'none')
-            .style('z-index', '9999')
-            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)')
-            .style('border', '1px solid rgba(255,255,255,0.1)')
-            .style('opacity', 0);
+            .style('position', 'absolute').style('background', 'rgba(0,0,0,0.9)').style('color', 'white')
+            .style('padding', '10px').style('border-radius', '6px').style('font-size', '12px')
+            .style('pointer-events', 'none').style('z-index', '9999').style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)').style('opacity', 0);
 
-        const content = `
-            <div>
-                <div style="font-weight: bold; margin-bottom: 4px; color: #60a5fa;">Region: ${regionName}</div>
-                <div><strong>ID:</strong> ${idText}</div>
-                <div><strong>State:</strong> ${stateName}</div>
-                <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
-                <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
-            </div>
-        `;
-
-        hoverTooltipRef.current.html(content)
-            .style('left', (event.pageX + 15) + 'px')
-            .style('top', (event.pageY - 15) + 'px')
-            .transition()
-            .duration(150)
-            .style('opacity', 1);
+        hoverTooltipRef.current.html(`
+            <div style="font-weight:bold;margin-bottom:4px;color:#60a5fa;">Region: ${regionName}</div>
+            <div><strong>ID:</strong> ${idText}</div>
+            <div><strong>State:</strong> ${stateName}</div>
+            <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
+            <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
+            ${block.timestamp ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">Timestamp: ${block.timestamp}</div>` : ''}
+        `).style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px').transition().duration(150).style('opacity', 1);
     };
 
     const showPersistentTooltip = (event, block) => {
-        if (tooltipRef.current) {
-            tooltipRef.current.remove();
-        }
+        if (tooltipRef.current) tooltipRef.current.remove();
         hideHoverTooltip();
 
         const stateName = BLOCK_STATES[block.state]?.name || 'Unknown';
@@ -596,50 +480,27 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
 
         tooltipRef.current = d3.select('body').append('div')
             .attr('class', 'memory-tooltip')
-            .style('position', 'absolute')
-            .style('background', 'rgba(0, 0, 0, 0.95)')
-            .style('color', 'white')
-            .style('padding', '12px')
-            .style('border-radius', '8px')
-            .style('font-size', '13px')
-            .style('pointer-events', 'auto')
-            .style('z-index', '10000')
-            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)')
-            .style('border', '1px solid rgba(255,255,255,0.1)')
-            .style('opacity', 0);
+            .style('position', 'absolute').style('background', 'rgba(0,0,0,0.95)').style('color', 'white')
+            .style('padding', '12px').style('border-radius', '8px').style('font-size', '13px')
+            .style('pointer-events', 'auto').style('z-index', '10000').style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)').style('opacity', 0);
 
-        const content = `
-            <div style="margin-bottom: 8px;">
-                <div style="font-weight: bold; margin-bottom: 6px; color: #60a5fa;">Region: ${regionName}</div>
+        tooltipRef.current.html(`
+            <div style="margin-bottom:8px;">
+                <div style="font-weight:bold;margin-bottom:6px;color:#60a5fa;">Region: ${regionName}</div>
                 <div><strong>ID:</strong> ${idText}</div>
                 <div><strong>State:</strong> ${stateName}</div>
                 <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
                 <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
                 <div><strong>End:</strong> 0x${(block.offset + block.size).toString(16).padStart(4, '0')}</div>
                 ${block.requestedSize ? `<div><strong>Requested:</strong> ${formatBytes(block.requestedSize)}</div>` : ''}
-                ${block.timestamp ? `<div style="color: #9ca3af; font-size: 11px; margin-top: 4px;">Timestamp: ${block.timestamp}</div>` : ''}
+                ${block.timestamp ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">Timestamp: ${block.timestamp}</div>` : ''}
             </div>
-            ${block.state === 1 ? '<div id="tooltip-free-btn" style="margin-top: 8px; padding: 6px 12px; background: #ef4444; border-radius: 4px; text-align: center; cursor: pointer; font-weight: bold; user-select: none;">Free Block</div>' : ''}
-        `;
-
-        tooltipRef.current.html(content)
-            .style('left', (event.pageX + 15) + 'px')
-            .style('top', (event.pageY - 15) + 'px')
-            .transition()
-            .duration(200)
-            .style('opacity', 1);
+            ${block.state === 1 ? '<div id="tooltip-free-btn" style="margin-top:8px;padding:6px 12px;background:#ef4444;border-radius:4px;text-align:center;cursor:pointer;font-weight:bold;user-select:none;">Free Block</div>' : ''}
+        `).style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px').transition().duration(200).style('opacity', 1);
 
         if (block.state === 1) {
             tooltipRef.current.select('#tooltip-free-btn')
-                .on('click', (e) => {
-                    e.stopPropagation();
-                    if (onFreeBlock) onFreeBlock(block);
-                    if (tooltipRef.current) {
-                        tooltipRef.current.remove();
-                        tooltipRef.current = null;
-                    }
-                    onBlockClick(null);
-                })
+                .on('click', (e) => { e.stopPropagation(); if (onFreeBlock) onFreeBlock(block); if (tooltipRef.current) { tooltipRef.current.remove(); tooltipRef.current = null; } onBlockClick(null); })
                 .on('mouseover', function() { d3.select(this).style('background', '#dc2626'); })
                 .on('mouseout', function() { d3.select(this).style('background', '#ef4444'); });
         }
@@ -647,154 +508,114 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
 
     const drawRegionLayout = (regionId) => {
         const regionBlocks = blocksByRegion[regionId] || [];
-        if (regionBlocks.length === 0) return;
-
-        const totalSize = Math.max(...regionBlocks.map(b => b.offset + b.size));
         const svg = d3.select(svgRefs.current[regionId]);
-        
         const currentTransform = transformRefs.current[regionId];
         const isInitialDraw = !currentTransform || currentTransform.k === 1;
         
         svg.selectAll('*').remove();
 
         const { width } = dimensions;
-        const margin = { top: 15, right: 20, bottom: 45, left: 50 };
+        const margin = { top: 12, right: 15, bottom: 40, left: 45 };
         const innerWidth = width - margin.left - margin.right;
-        const innerHeight = regionHeight - margin.top - margin.bottom;
+        const innerHeight = regionHeight - margin.top - margin.bottom - borderWidth * 2;
 
-        const xScale = d3.scaleLinear()
-            .domain([0, totalSize])
-            .range([0, innerWidth]);
+        // Calculate totalSize for this region
+        const totalSize = regionBlocks.length > 0 ? Math.max(...regionBlocks.map(b => b.offset + b.size)) : 10240;
 
-        svg.append('defs')
-            .append('clipPath')
-            .attr('id', `clip-region-${regionId}`)
-            .append('rect')
-            .attr('x', 0)
-            .attr('y', 0)
-            .attr('width', innerWidth)
-            .attr('height', innerHeight);
+        const xScale = d3.scaleLinear().domain([0, totalSize]).range([0, innerWidth]);
 
-        const g = svg.append('g')
-            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        svg.append('defs').append('clipPath').attr('id', `clip-region-${regionId}`)
+            .append('rect').attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
+
+        const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);
 
         const zoom = d3.zoom()
             .scaleExtent([1, 50])
             .on('zoom', (event) => {
                 const { transform } = event;
-                
-                // Log zoom level only when it changes
                 const currentZoom = transform.k;
                 if (Math.abs(currentZoom - (lastZoomLevelRef.current[regionId] || 1)) > 0.01) {
                     console.log(`Region ${regionId} (${regionNames[regionId]}) zoom: ${currentZoom.toFixed(2)}`);
                     lastZoomLevelRef.current[regionId] = currentZoom;
                 }
-                
                 transformRefs.current[regionId] = transform;
-                const newXScale = transform.rescaleX(xScale);
                 
-                // Clamp domain
+                const newXScale = transform.rescaleX(xScale);
                 let [d0, d1] = newXScale.domain();
-                if (d0 < 0) {
-                    const shift = -d0;
-                    d0 = 0;
-                    d1 = d1 + shift;
-                }
-                if (d1 > totalSize) {
-                    const shift = d1 - totalSize;
-                    d1 = totalSize;
-                    d0 = Math.max(0, d0 - shift);
-                }
+                
+                // Clamp: don't let start go below 0
+                if (d0 < 0) { d1 -= d0; d0 = 0; }
+                // Clamp: don't let end go beyond totalSize
+                if (d1 > totalSize) { d0 = Math.max(0, d0 - (d1 - totalSize)); d1 = totalSize; }
                 
                 const clampedScale = d3.scaleLinear().domain([d0, d1]).range([0, innerWidth]);
                 
-                // Update blocks
-                g.selectAll('.block-rect')
-                    .attr('x', d => clampedScale(d.offset))
-                    .attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
-                
-                g.selectAll('.block-text')
-                    .attr('x', d => clampedScale(d.offset) + (clampedScale(d.offset + d.size) - clampedScale(d.offset)) / 2)
-                    .style('display', d => (clampedScale(d.offset + d.size) - clampedScale(d.offset)) > 30 ? 'block' : 'none');
-                
-                // Update selection overlay
-                g.selectAll('.block-selection-overlay')
-                    .attr('x', d => clampedScale(d.offset))
-                    .attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
-                
+                g.selectAll('.block-rect').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
+                g.selectAll('.block-text').attr('x', d => clampedScale(d.offset) + (clampedScale(d.offset + d.size) - clampedScale(d.offset)) / 2).style('display', d => (clampedScale(d.offset + d.size) - clampedScale(d.offset)) > 30 ? 'block' : 'none');
+                g.selectAll('.block-selection-overlay').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
                 updateAxis(g, clampedScale, totalSize, regionBlocks, innerHeight, transform.k);
             });
 
-        // Set up zoom with center-based scaling
         svg.call(zoom)
             .on('wheel.zoom', function(event) {
                 event.preventDefault();
-                const currentTransform = transformRefs.current[regionId] || d3.zoomIdentity;
+                const ct = transformRefs.current[regionId] || d3.zoomIdentity;
                 const pointer = d3.pointer(event, g.node());
-                const k = currentTransform.k * Math.pow(2, -event.deltaY * 0.002);
+                const k = ct.k * Math.pow(2, -event.deltaY * 0.002);
                 const newK = Math.max(1, Math.min(50, k));
                 
-                // Calculate new transform centered on mouse position
-                const currentXScale = currentTransform.rescaleX(xScale);
-                const mouseX = pointer[0];
+                const currentXScale = ct.rescaleX(xScale);
+                const mouseX = Math.max(0, pointer[0]);
                 const dataX = currentXScale.invert(mouseX);
                 
-                const newXScale = d3.scaleLinear()
-                    .domain([0, totalSize])
-                    .range([0, innerWidth * newK]);
+                // Ensure dataX stays >= 0 after zoom
+                const clampedDataX = Math.max(0, dataX);
                 
-                let tx = mouseX - newXScale(dataX);
+                const newRange = totalSize / newK;
+                let newD0 = clampedDataX - (mouseX / innerWidth) * newRange;
+                let newD1 = newD0 + newRange;
                 
-                // Clamp translation
-                const maxTx = 0;
-                const minTx = innerWidth - innerWidth * newK;
-                tx = Math.max(minTx, Math.min(maxTx, tx));
+                // Clamp domain
+                if (newD0 < 0) { newD1 -= newD0; newD0 = 0; }
+                if (newD1 > totalSize) { newD0 = Math.max(0, newD0 - (newD1 - totalSize)); newD1 = totalSize; }
+                
+                const newScale = d3.scaleLinear().domain([newD0, newD1]).range([0, innerWidth]);
+                const tx = -newScale(0) * newK;
                 
                 const newTransform = d3.zoomIdentity.translate(tx, 0).scale(newK);
                 svg.call(zoom.transform, newTransform);
             });
         
         zoomRefs.current[regionId] = zoom;
-
-        if (currentTransform && !isInitialDraw) {
-            svg.call(zoom.transform, currentTransform);
-        } else {
-            transformRefs.current[regionId] = d3.zoomIdentity;
-            lastZoomLevelRef.current[regionId] = 1;
-        }
+        if (currentTransform && !isInitialDraw) svg.call(zoom.transform, currentTransform);
+        else { transformRefs.current[regionId] = d3.zoomIdentity; lastZoomLevelRef.current[regionId] = 1; }
 
         const regionColor = REGION_COLORS[regionId] || REGION_COLORS[0];
-        g.append('rect')
-            .attr('class', 'heap-boundary')
-            .attr('x', 0)
-            .attr('y', 0)
-            .attr('width', innerWidth)
-            .attr('height', innerHeight)
-            .attr('fill', regionColor.bg)
-            .attr('stroke', regionColor.border)
-            .attr('stroke-width', 2);
+        
+        // Draw boundary first (background)
+        g.append('rect').attr('class', 'heap-boundary')
+            .attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight)
+            .attr('fill', regionColor.bg).attr('stroke', regionColor.border).attr('stroke-width', borderWidth);
 
         const currentXScale = (currentTransform && !isInitialDraw) ? currentTransform.rescaleX(xScale) : xScale;
         const currentZoomLevel = (currentTransform && !isInitialDraw) ? currentTransform.k : 1;
 
+        // Draw blocks on top
         if (regionBlocks.length > 0) {
-            const blockGroup = g.append('g')
-                .attr('clip-path', `url(#clip-region-${regionId})`);
-
+            const blockGroup = g.append('g').attr('clip-path', `url(#clip-region-${regionId})`);
             const sortedBlocks = [...regionBlocks].sort((a, b) => a.offset - b.offset);
 
-            const blockGroups = blockGroup.selectAll('.block')
-                .data(sortedBlocks)
-                .enter()
-                .append('g')
-                .attr('class', 'block');
+            const blockGroups = blockGroup.selectAll('.block').data(sortedBlocks).enter().append('g').attr('class', 'block');
 
+            // Inset blocks slightly to not cover the border
+            const blockInset = borderWidth;
+            
             blockGroups.append('rect')
                 .attr('class', 'block-rect')
                 .attr('x', d => currentXScale(d.offset))
-                .attr('y', 0)
+                .attr('y', blockInset)
                 .attr('width', d => Math.max(1, currentXScale(d.offset + d.size) - currentXScale(d.offset)))
-                .attr('height', innerHeight)
+                .attr('height', innerHeight - blockInset * 2)
                 .attr('fill', d => BLOCK_STATES[d.state]?.color || '#999')
                 .attr('opacity', d => d.state === 0 ? 0.5 : 1.0)
                 .attr('stroke', 'rgba(255,255,255,0.3)')
@@ -803,103 +624,55 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                 .on('mouseenter', function(event, d) {
                     showHoverTooltip(event, d);
                     if (!(selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId)) {
-                        d3.select(this)
-                            .attr('stroke', '#000')
-                            .attr('stroke-width', 2);
+                        d3.select(this).attr('stroke', '#000').attr('stroke-width', 2);
                     }
                 })
-                .on('mousemove', function(event) {
-                    if (hoverTooltipRef.current) {
-                        hoverTooltipRef.current
-                            .style('left', (event.pageX + 15) + 'px')
-                            .style('top', (event.pageY - 15) + 'px');
-                    }
-                })
+                .on('mousemove', function(event) { if (hoverTooltipRef.current) hoverTooltipRef.current.style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px'); })
                 .on('mouseleave', function(event, d) {
                     hideHoverTooltip();
                     if (!(selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId)) {
-                        d3.select(this)
-                            .attr('stroke', 'rgba(255,255,255,0.3)')
-                            .attr('stroke-width', 1);
+                        d3.select(this).attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1);
                     }
                 })
-                .on('click', function(event, d) {
-                    event.stopPropagation();
-                    onBlockClick(d);
-                    showPersistentTooltip(event, d);
-                });
+                .on('click', function(event, d) { event.stopPropagation(); onBlockClick(d); showPersistentTooltip(event, d); });
 
-            // Selection overlay
             if (selectedBlock) {
-                const selectedBlockData = sortedBlocks.find(b => 
-                    b.offset === selectedBlock.offset && b.regionId === selectedBlock.regionId
-                );
-                if (selectedBlockData) {
-                    blockGroup.append('rect')
-                        .datum(selectedBlockData)
-                        .attr('class', 'block-selection-overlay')
-                        .attr('x', currentXScale(selectedBlockData.offset))
-                        .attr('y', 0)
-                        .attr('width', Math.max(1, currentXScale(selectedBlockData.offset + selectedBlockData.size) - currentXScale(selectedBlockData.offset)))
-                        .attr('height', innerHeight)
-                        .attr('fill', 'none')
-                        .attr('stroke', '#000')
-                        .attr('stroke-width', 3)
-                        .style('pointer-events', 'none');
+                const sbd = sortedBlocks.find(b => b.offset === selectedBlock.offset && b.regionId === selectedBlock.regionId);
+                if (sbd) {
+                    blockGroup.append('rect').datum(sbd).attr('class', 'block-selection-overlay')
+                        .attr('x', currentXScale(sbd.offset)).attr('y', blockInset)
+                        .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
+                        .attr('height', innerHeight - blockInset * 2)
+                        .attr('fill', 'none').attr('stroke', '#000').attr('stroke-width', 3).style('pointer-events', 'none');
                 }
             }
 
-            blockGroups.append('text')
-                .attr('class', 'block-text')
+            blockGroups.append('text').attr('class', 'block-text')
                 .attr('x', d => currentXScale(d.offset) + (currentXScale(d.offset + d.size) - currentXScale(d.offset)) / 2)
                 .attr('y', innerHeight / 2)
-                .attr('dy', '0.35em')
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '11px')
-                .attr('font-weight', 'bold')
-                .style('pointer-events', 'none')
-                .style('text-shadow', '1px 1px 2px rgba(0,0,0,0.8)')
+                .attr('dy', '0.35em').attr('text-anchor', 'middle').attr('fill', 'white').attr('font-size', '10px').attr('font-weight', 'bold')
+                .style('pointer-events', 'none').style('text-shadow', '1px 1px 2px rgba(0,0,0,0.8)')
                 .style('display', d => (currentXScale(d.offset + d.size) - currentXScale(d.offset)) > 30 ? 'block' : 'none')
-                .text(d => {
-                    if (d.state === 1 && d.allocationId > 0) return `#${d.allocationId}`;
-                    if (d.state === 0 && d.size > 500) return 'FREE';
-                    if (d.state === 2) return 'FREED';
-                    return '';
-                });
+                .text(d => { if (d.state === 1 && d.allocationId > 0) return `#${d.allocationId}`; if (d.state === 0 && d.size > 500) return 'FREE'; if (d.state === 2) return 'FREED'; return ''; });
         }
 
         updateAxis(g, currentXScale, totalSize, regionBlocks, innerHeight, currentZoomLevel);
-
-        svg.on('click', () => {
-            onBlockClick(null);
-            hideHoverTooltip();
-        });
+        svg.on('click', () => { onBlockClick(null); hideHoverTooltip(); });
     };
 
     const updateAxis = (g, xScale, totalSize, blocks, innerHeight, zoomLevel) => {
         g.select('.x-axis').remove();
         g.select('.allocation-markers').remove();
         
-        const tickInterval = Math.max(1024, totalSize / 8);
+        const tickInterval = Math.max(1024, totalSize / 6);
         const regularTicks = d3.range(0, totalSize + 1, tickInterval);
         const mainTicks = [...new Set([0, ...regularTicks, totalSize])].sort((a, b) => a - b);
         
-        const xAxis = d3.axisBottom(xScale)
-            .tickValues(mainTicks)
-            .tickFormat(d => `0x${Math.round(d).toString(16).padStart(4, '0')}`);
-
-        g.append('g')
-            .attr('class', 'x-axis')
-            .attr('transform', `translate(0, ${innerHeight + 5})`)
-            .call(xAxis)
-            .selectAll('text')
-            .style('fill', '#000')
-            .style('font-size', '9px');
+        g.append('g').attr('class', 'x-axis').attr('transform', `translate(0, ${innerHeight + 4})`)
+            .call(d3.axisBottom(xScale).tickValues(mainTicks).tickFormat(d => `0x${Math.round(d).toString(16).padStart(4, '0')}`))
+            .selectAll('text').style('fill', '#000').style('font-size', '8px');
 
         const mainTickSet = new Set(mainTicks.map(t => Math.round(t)));
-
-        // Use same threshold for markers and labels (zoomLevel > 4)
         const markerThreshold = 4;
         
         if (zoomLevel > markerThreshold) {
@@ -914,39 +687,16 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                 const endAddress = block.offset + block.size;
                 
                 if (width > 40) {
-                    const startOverlapsMainTick = mainTickSet.has(block.offset);
-                    const showStart = !startOverlapsMainTick;
-                    const endIsStartOfAnother = startAddresses.has(endAddress);
-                    const showEnd = !endIsStartOfAnother;
+                    const showStart = !mainTickSet.has(block.offset);
+                    const showEnd = !startAddresses.has(endAddress);
                     
                     if (showStart && startX >= 0) {
-                        markerGroup.append('line')
-                            .attr('x1', startX).attr('x2', startX)
-                            .attr('y1', innerHeight + 5).attr('y2', innerHeight + 12)
-                            .attr('stroke', '#000').attr('stroke-width', 1.5);
-                        
-                        if (width > 60) {
-                            markerGroup.append('text')
-                                .attr('x', startX).attr('y', innerHeight + 24)
-                                .attr('text-anchor', 'middle')
-                                .attr('font-size', '8px').attr('fill', '#000')
-                                .text(`0x${block.offset.toString(16).padStart(4, '0')}`);
-                        }
+                        markerGroup.append('line').attr('x1', startX).attr('x2', startX).attr('y1', innerHeight + 4).attr('y2', innerHeight + 10).attr('stroke', '#000').attr('stroke-width', 1.5);
+                        if (width > 50) markerGroup.append('text').attr('x', startX).attr('y', innerHeight + 20).attr('text-anchor', 'middle').attr('font-size', '7px').attr('fill', '#000').text(`0x${block.offset.toString(16).padStart(4, '0')}`);
                     }
-                    
                     if (showEnd) {
-                        markerGroup.append('line')
-                            .attr('x1', endX).attr('x2', endX)
-                            .attr('y1', innerHeight + 5).attr('y2', innerHeight + 12)
-                            .attr('stroke', '#000').attr('stroke-width', 1.5);
-                        
-                        if (width > 60) {
-                            markerGroup.append('text')
-                                .attr('x', endX).attr('y', innerHeight + 24)
-                                .attr('text-anchor', 'middle')
-                                .attr('font-size', '8px').attr('fill', '#000')
-                                .text(`0x${endAddress.toString(16).padStart(4, '0')}`);
-                        }
+                        markerGroup.append('line').attr('x1', endX).attr('x2', endX).attr('y1', innerHeight + 4).attr('y2', innerHeight + 10).attr('stroke', '#000').attr('stroke-width', 1.5);
+                        if (width > 50) markerGroup.append('text').attr('x', endX).attr('y', innerHeight + 20).attr('text-anchor', 'middle').attr('font-size', '7px').attr('fill', '#000').text(`0x${endAddress.toString(16).padStart(4, '0')}`);
                     }
                 }
             });
@@ -958,16 +708,12 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
             {regionIds.map((regionId, idx) => {
                 const regionColor = REGION_COLORS[regionId] || REGION_COLORS[0];
                 return (
-                    <Box key={regionId} mb={idx < regionIds.length - 1 ? 1 : 0} sx={{ flexShrink: 0 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: regionColor.border, mb: 0.25, display: 'block' }}>
+                    <Box key={regionId} mb={idx < regionIds.length - 1 ? 0.75 : 0} sx={{ flexShrink: 0 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: regionColor.border, mb: 0.25, display: 'block', fontSize: '0.7rem' }}>
                             Region {regionId}: {regionNames[regionId]}
                         </Typography>
-                        <svg
-                            ref={el => svgRefs.current[regionId] = el}
-                            width={dimensions.width}
-                            height={regionHeight}
-                            style={{ border: `2px solid ${regionColor.border}`, borderRadius: '4px', display: 'block', background: regionColor.bg }}
-                        />
+                        <svg ref={el => svgRefs.current[regionId] = el} width={dimensions.width} height={regionHeight}
+                            style={{ border: `${borderWidth}px solid ${regionColor.border}`, borderRadius: '4px', display: 'block', background: regionColor.bg }} />
                     </Box>
                 );
             })}
@@ -980,6 +726,7 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
     const zoomRef = useRef(null);
     const transformRef = useRef(d3.zoomIdentity);
     const lastZoomLevelRef = useRef(1);
+    const borderWidth = 2;
 
     useEffect(() => {
         if (resetZoom && zoomRef.current) {
@@ -990,16 +737,10 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
         }
     }, [resetZoom]);
 
-    const hideHoverTooltip = () => {
-        if (hoverTooltipRef.current) {
-            hoverTooltipRef.current.remove();
-            hoverTooltipRef.current = null;
-        }
-    };
+    const hideHoverTooltip = () => { if (hoverTooltipRef.current) { hoverTooltipRef.current.remove(); hoverTooltipRef.current = null; } };
 
     const showHoverTooltip = (event, block) => {
         if (selectedBlock && selectedBlock.offset === block.offset) return;
-
         hideHoverTooltip();
 
         const stateName = BLOCK_STATES[block.state]?.name || 'Unknown';
@@ -1007,28 +748,17 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
 
         hoverTooltipRef.current = d3.select('body').append('div')
             .attr('class', 'memory-tooltip-hover')
-            .style('position', 'absolute')
-            .style('background', 'rgba(0, 0, 0, 0.9)')
-            .style('color', 'white')
-            .style('padding', '10px')
-            .style('border-radius', '6px')
-            .style('font-size', '12px')
-            .style('pointer-events', 'none')
-            .style('z-index', '9999')
-            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)')
-            .style('opacity', 0);
+            .style('position', 'absolute').style('background', 'rgba(0,0,0,0.9)').style('color', 'white')
+            .style('padding', '10px').style('border-radius', '6px').style('font-size', '12px')
+            .style('pointer-events', 'none').style('z-index', '9999').style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)').style('opacity', 0);
 
         hoverTooltipRef.current.html(`
-            <div>
-                <div><strong>ID:</strong> ${idText}</div>
-                <div><strong>State:</strong> ${stateName}</div>
-                <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
-                <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
-            </div>
-        `)
-            .style('left', (event.pageX + 15) + 'px')
-            .style('top', (event.pageY - 15) + 'px')
-            .transition().duration(150).style('opacity', 1);
+            <div><strong>ID:</strong> ${idText}</div>
+            <div><strong>State:</strong> ${stateName}</div>
+            <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
+            <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
+            ${block.timestamp ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">Timestamp: ${block.timestamp}</div>` : ''}
+        `).style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px').transition().duration(150).style('opacity', 1);
     };
 
     const showPersistentTooltip = (event, block) => {
@@ -1040,41 +770,26 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
 
         tooltipRef.current = d3.select('body').append('div')
             .attr('class', 'memory-tooltip')
-            .style('position', 'absolute')
-            .style('background', 'rgba(0, 0, 0, 0.95)')
-            .style('color', 'white')
-            .style('padding', '12px')
-            .style('border-radius', '8px')
-            .style('font-size', '13px')
-            .style('pointer-events', 'auto')
-            .style('z-index', '10000')
-            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)')
-            .style('opacity', 0);
+            .style('position', 'absolute').style('background', 'rgba(0,0,0,0.95)').style('color', 'white')
+            .style('padding', '12px').style('border-radius', '8px').style('font-size', '13px')
+            .style('pointer-events', 'auto').style('z-index', '10000').style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)').style('opacity', 0);
 
         tooltipRef.current.html(`
-            <div style="margin-bottom: 8px;">
+            <div style="margin-bottom:8px;">
                 <div><strong>ID:</strong> ${idText}</div>
                 <div><strong>State:</strong> ${stateName}</div>
                 <div><strong>Size:</strong> ${formatBytes(block.size)}</div>
                 <div><strong>Offset:</strong> 0x${block.offset.toString(16).padStart(4, '0')}</div>
                 <div><strong>End:</strong> 0x${(block.offset + block.size).toString(16).padStart(4, '0')}</div>
                 ${block.requestedSize ? `<div><strong>Requested:</strong> ${formatBytes(block.requestedSize)}</div>` : ''}
-                ${block.timestamp ? `<div style="color: #9ca3af; font-size: 11px; margin-top: 4px;">Timestamp: ${block.timestamp}</div>` : ''}
+                ${block.timestamp ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px;">Timestamp: ${block.timestamp}</div>` : ''}
             </div>
-            ${block.state === 1 ? '<div id="tooltip-free-btn" style="margin-top: 8px; padding: 6px 12px; background: #ef4444; border-radius: 4px; text-align: center; cursor: pointer; font-weight: bold; user-select: none;">Free Block</div>' : ''}
-        `)
-            .style('left', (event.pageX + 15) + 'px')
-            .style('top', (event.pageY - 15) + 'px')
-            .transition().duration(200).style('opacity', 1);
+            ${block.state === 1 ? '<div id="tooltip-free-btn" style="margin-top:8px;padding:6px 12px;background:#ef4444;border-radius:4px;text-align:center;cursor:pointer;font-weight:bold;user-select:none;">Free Block</div>' : ''}
+        `).style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px').transition().duration(200).style('opacity', 1);
 
         if (block.state === 1) {
             tooltipRef.current.select('#tooltip-free-btn')
-                .on('click', (e) => {
-                    e.stopPropagation();
-                    if (onFreeBlock) onFreeBlock(block);
-                    if (tooltipRef.current) { tooltipRef.current.remove(); tooltipRef.current = null; }
-                    onBlockClick(null);
-                })
+                .on('click', (e) => { e.stopPropagation(); if (onFreeBlock) onFreeBlock(block); if (tooltipRef.current) { tooltipRef.current.remove(); tooltipRef.current = null; } onBlockClick(null); })
                 .on('mouseover', function() { d3.select(this).style('background', '#dc2626'); })
                 .on('mouseout', function() { d3.select(this).style('background', '#ef4444'); });
         }
@@ -1084,13 +799,11 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
         g.select('.x-axis').remove();
         g.select('.allocation-markers').remove();
         
-        const tickInterval = Math.max(4096, totalSize / 8);
+        const tickInterval = Math.max(4096, totalSize / 6);
         const regularTicks = d3.range(0, totalSize + 1, tickInterval);
         const mainTicks = [...new Set([0, ...regularTicks, totalSize])].sort((a, b) => a - b);
 
-        g.append('g')
-            .attr('class', 'x-axis')
-            .attr('transform', `translate(0, ${innerHeight + 5})`)
+        g.append('g').attr('class', 'x-axis').attr('transform', `translate(0, ${innerHeight + 4})`)
             .call(d3.axisBottom(xScale).tickValues(mainTicks).tickFormat(d => `0x${Math.round(d).toString(16).padStart(4, '0')}`))
             .selectAll('text').style('fill', '#000').style('font-size', '9px');
 
@@ -1113,12 +826,12 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                     const showEnd = !startAddresses.has(endAddress);
                     
                     if (showStart && startX >= 0) {
-                        markerGroup.append('line').attr('x1', startX).attr('x2', startX).attr('y1', innerHeight + 5).attr('y2', innerHeight + 12).attr('stroke', '#000').attr('stroke-width', 1.5);
-                        if (width > 60) markerGroup.append('text').attr('x', startX).attr('y', innerHeight + 24).attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#000').text(`0x${block.offset.toString(16).padStart(4, '0')}`);
+                        markerGroup.append('line').attr('x1', startX).attr('x2', startX).attr('y1', innerHeight + 4).attr('y2', innerHeight + 10).attr('stroke', '#000').attr('stroke-width', 1.5);
+                        if (width > 50) markerGroup.append('text').attr('x', startX).attr('y', innerHeight + 20).attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#000').text(`0x${block.offset.toString(16).padStart(4, '0')}`);
                     }
                     if (showEnd) {
-                        markerGroup.append('line').attr('x1', endX).attr('x2', endX).attr('y1', innerHeight + 5).attr('y2', innerHeight + 12).attr('stroke', '#000').attr('stroke-width', 1.5);
-                        if (width > 60) markerGroup.append('text').attr('x', endX).attr('y', innerHeight + 24).attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#000').text(`0x${endAddress.toString(16).padStart(4, '0')}`);
+                        markerGroup.append('line').attr('x1', endX).attr('x2', endX).attr('y1', innerHeight + 4).attr('y2', innerHeight + 10).attr('stroke', '#000').attr('stroke-width', 1.5);
+                        if (width > 50) markerGroup.append('text').attr('x', endX).attr('y', innerHeight + 20).attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#000').text(`0x${endAddress.toString(16).padStart(4, '0')}`);
                     }
                 }
             });
@@ -1129,15 +842,15 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
         if (!totalSize) return;
 
         const svg = d3.select(svgRef.current);
-        const currentTransform = transformRef.current;
-        const isInitialDraw = !currentTransform || currentTransform.k === 1;
+        const ct = transformRef.current;
+        const isInitialDraw = !ct || ct.k === 1;
         
         svg.selectAll('*').remove();
 
         const { width, height } = dimensions;
-        const margin = { top: 15, right: 20, bottom: 50, left: 50 };
+        const margin = { top: 12, right: 15, bottom: 45, left: 45 };
         const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
+        const innerHeight = height - margin.top - margin.bottom - borderWidth * 2;
 
         const xScale = d3.scaleLinear().domain([0, totalSize]).range([0, innerWidth]);
 
@@ -1150,83 +863,75 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
             .scaleExtent([1, 50])
             .on('zoom', (event) => {
                 const { transform } = event;
-                
                 if (Math.abs(transform.k - lastZoomLevelRef.current) > 0.01) {
                     console.log(`Heap zoom: ${transform.k.toFixed(2)}`);
                     lastZoomLevelRef.current = transform.k;
                 }
-                
                 transformRef.current = transform;
-                const newXScale = transform.rescaleX(xScale);
                 
+                const newXScale = transform.rescaleX(xScale);
                 let [d0, d1] = newXScale.domain();
-                if (d0 < 0) { const s = -d0; d0 = 0; d1 += s; }
-                if (d1 > totalSize) { const s = d1 - totalSize; d1 = totalSize; d0 = Math.max(0, d0 - s); }
+                if (d0 < 0) { d1 -= d0; d0 = 0; }
+                if (d1 > totalSize) { d0 = Math.max(0, d0 - (d1 - totalSize)); d1 = totalSize; }
                 
                 const clampedScale = d3.scaleLinear().domain([d0, d1]).range([0, innerWidth]);
                 
-                g.selectAll('.block-rect')
-                    .attr('x', d => clampedScale(d.offset))
-                    .attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
-                
-                g.selectAll('.block-text')
-                    .attr('x', d => clampedScale(d.offset) + (clampedScale(d.offset + d.size) - clampedScale(d.offset)) / 2)
-                    .style('display', d => (clampedScale(d.offset + d.size) - clampedScale(d.offset)) > 30 ? 'block' : 'none');
-                
-                g.selectAll('.block-selection-overlay')
-                    .attr('x', d => clampedScale(d.offset))
-                    .attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
-                
+                g.selectAll('.block-rect').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
+                g.selectAll('.block-text').attr('x', d => clampedScale(d.offset) + (clampedScale(d.offset + d.size) - clampedScale(d.offset)) / 2).style('display', d => (clampedScale(d.offset + d.size) - clampedScale(d.offset)) > 30 ? 'block' : 'none');
+                g.selectAll('.block-selection-overlay').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
                 updateAxis(g, clampedScale, totalSize, blocks, innerHeight, transform.k);
             });
 
         svg.call(zoom)
             .on('wheel.zoom', function(event) {
                 event.preventDefault();
-                const ct = transformRef.current || d3.zoomIdentity;
+                const ctr = transformRef.current || d3.zoomIdentity;
                 const pointer = d3.pointer(event, g.node());
-                const k = ct.k * Math.pow(2, -event.deltaY * 0.002);
+                const k = ctr.k * Math.pow(2, -event.deltaY * 0.002);
                 const newK = Math.max(1, Math.min(50, k));
                 
-                const currentXScale = ct.rescaleX(xScale);
-                const mouseX = pointer[0];
-                const dataX = currentXScale.invert(mouseX);
+                const currentXScale = ctr.rescaleX(xScale);
+                const mouseX = Math.max(0, pointer[0]);
+                const dataX = Math.max(0, currentXScale.invert(mouseX));
                 
-                const newXScale = d3.scaleLinear().domain([0, totalSize]).range([0, innerWidth * newK]);
-                let tx = mouseX - newXScale(dataX);
-                tx = Math.max(innerWidth - innerWidth * newK, Math.min(0, tx));
+                const newRange = totalSize / newK;
+                let newD0 = dataX - (mouseX / innerWidth) * newRange;
+                let newD1 = newD0 + newRange;
+                
+                if (newD0 < 0) { newD1 -= newD0; newD0 = 0; }
+                if (newD1 > totalSize) { newD0 = Math.max(0, newD0 - (newD1 - totalSize)); newD1 = totalSize; }
+                
+                const newScale = d3.scaleLinear().domain([newD0, newD1]).range([0, innerWidth]);
+                const tx = -newScale(0) * newK;
                 
                 svg.call(zoom.transform, d3.zoomIdentity.translate(tx, 0).scale(newK));
             });
         
         zoomRef.current = zoom;
+        if (ct && !isInitialDraw) svg.call(zoom.transform, ct);
+        else { transformRef.current = d3.zoomIdentity; lastZoomLevelRef.current = 1; }
 
-        if (currentTransform && !isInitialDraw) {
-            svg.call(zoom.transform, currentTransform);
-        } else {
-            transformRef.current = d3.zoomIdentity;
-            lastZoomLevelRef.current = 1;
-        }
-
+        // Draw boundary first
         g.append('rect').attr('class', 'heap-boundary')
             .attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight)
-            .attr('fill', 'none').attr('stroke', '#333').attr('stroke-width', 2);
+            .attr('fill', 'none').attr('stroke', '#333').attr('stroke-width', borderWidth);
 
-        const currentXScale = (currentTransform && !isInitialDraw) ? currentTransform.rescaleX(xScale) : xScale;
-        const currentZoomLevel = (currentTransform && !isInitialDraw) ? currentTransform.k : 1;
+        const currentXScale = (ct && !isInitialDraw) ? ct.rescaleX(xScale) : xScale;
+        const currentZoomLevel = (ct && !isInitialDraw) ? ct.k : 1;
 
         if (blocks && blocks.length > 0) {
             const blockGroup = g.append('g').attr('clip-path', 'url(#clip-main)');
             const sortedBlocks = [...blocks].sort((a, b) => a.offset - b.offset);
-
             const blockGroups = blockGroup.selectAll('.block').data(sortedBlocks).enter().append('g').attr('class', 'block');
+            
+            const blockInset = borderWidth;
 
             blockGroups.append('rect')
                 .attr('class', 'block-rect')
                 .attr('x', d => currentXScale(d.offset))
-                .attr('y', 0)
+                .attr('y', blockInset)
                 .attr('width', d => Math.max(1, currentXScale(d.offset + d.size) - currentXScale(d.offset)))
-                .attr('height', innerHeight)
+                .attr('height', innerHeight - blockInset * 2)
                 .attr('fill', d => BLOCK_STATES[d.state]?.color || '#999')
                 .attr('opacity', d => d.state === 0 ? 0.5 : 1.0)
                 .attr('stroke', 'rgba(255,255,255,0.3)')
@@ -1234,62 +939,33 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 .style('cursor', 'pointer')
                 .on('mouseenter', function(event, d) {
                     showHoverTooltip(event, d);
-                    if (!(selectedBlock && selectedBlock.offset === d.offset)) {
-                        d3.select(this).attr('stroke', '#000').attr('stroke-width', 2);
-                    }
+                    if (!(selectedBlock && selectedBlock.offset === d.offset)) d3.select(this).attr('stroke', '#000').attr('stroke-width', 2);
                 })
-                .on('mousemove', function(event) {
-                    if (hoverTooltipRef.current) {
-                        hoverTooltipRef.current.style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px');
-                    }
-                })
+                .on('mousemove', function(event) { if (hoverTooltipRef.current) hoverTooltipRef.current.style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px'); })
                 .on('mouseleave', function(event, d) {
                     hideHoverTooltip();
-                    if (!(selectedBlock && selectedBlock.offset === d.offset)) {
-                        d3.select(this).attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1);
-                    }
+                    if (!(selectedBlock && selectedBlock.offset === d.offset)) d3.select(this).attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1);
                 })
-                .on('click', function(event, d) {
-                    event.stopPropagation();
-                    onBlockClick(d);
-                    showPersistentTooltip(event, d);
-                });
+                .on('click', function(event, d) { event.stopPropagation(); onBlockClick(d); showPersistentTooltip(event, d); });
 
             if (selectedBlock) {
                 const sbd = sortedBlocks.find(b => b.offset === selectedBlock.offset);
                 if (sbd) {
-                    blockGroup.append('rect')
-                        .datum(sbd)
-                        .attr('class', 'block-selection-overlay')
-                        .attr('x', currentXScale(sbd.offset))
-                        .attr('y', 0)
+                    blockGroup.append('rect').datum(sbd).attr('class', 'block-selection-overlay')
+                        .attr('x', currentXScale(sbd.offset)).attr('y', blockInset)
                         .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
-                        .attr('height', innerHeight)
-                        .attr('fill', 'none')
-                        .attr('stroke', '#000')
-                        .attr('stroke-width', 3)
-                        .style('pointer-events', 'none');
+                        .attr('height', innerHeight - blockInset * 2)
+                        .attr('fill', 'none').attr('stroke', '#000').attr('stroke-width', 3).style('pointer-events', 'none');
                 }
             }
 
-            blockGroups.append('text')
-                .attr('class', 'block-text')
+            blockGroups.append('text').attr('class', 'block-text')
                 .attr('x', d => currentXScale(d.offset) + (currentXScale(d.offset + d.size) - currentXScale(d.offset)) / 2)
                 .attr('y', innerHeight / 2)
-                .attr('dy', '0.35em')
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '11px')
-                .attr('font-weight', 'bold')
-                .style('pointer-events', 'none')
-                .style('text-shadow', '1px 1px 2px rgba(0,0,0,0.8)')
+                .attr('dy', '0.35em').attr('text-anchor', 'middle').attr('fill', 'white').attr('font-size', '11px').attr('font-weight', 'bold')
+                .style('pointer-events', 'none').style('text-shadow', '1px 1px 2px rgba(0,0,0,0.8)')
                 .style('display', d => (currentXScale(d.offset + d.size) - currentXScale(d.offset)) > 30 ? 'block' : 'none')
-                .text(d => {
-                    if (d.state === 1 && d.allocationId > 0) return `#${d.allocationId}`;
-                    if (d.state === 0 && d.size > 1000) return 'FREE';
-                    if (d.state === 2) return 'FREED';
-                    return '';
-                });
+                .text(d => { if (d.state === 1 && d.allocationId > 0) return `#${d.allocationId}`; if (d.state === 0 && d.size > 1000) return 'FREE'; if (d.state === 2) return 'FREED'; return ''; });
         }
 
         updateAxis(g, currentXScale, totalSize, blocks, innerHeight, currentZoomLevel);
@@ -1300,7 +976,7 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
     return (
         <Box sx={{ flex: 1, minHeight: 0 }}>
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height}
-                style={{ border: '1px solid #ccc', borderRadius: '4px', display: 'block' }} />
+                style={{ border: `${borderWidth}px solid #333`, borderRadius: '4px', display: 'block' }} />
         </Box>
     );
 };

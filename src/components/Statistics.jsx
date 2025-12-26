@@ -3,7 +3,6 @@ import {
     Box, 
     Typography, 
     LinearProgress, 
-    Grid,
     FormControl,
     Select,
     MenuItem,
@@ -19,24 +18,73 @@ import {
     HelpOutline as HelpIcon
 } from '@mui/icons-material';
 
+// Heap implementation descriptions for tooltips
+const HEAP_INFO = {
+    1: {
+        label: 'Bump Allocator',
+        description: `Heap 1 (Bump/Linear Allocator):
+• Simplest allocation strategy - just increments a pointer
+• O(1) allocation time, extremely fast
+• Does NOT support freeing individual blocks
+• Memory can only be reclaimed by resetting the entire heap
+• Zero fragmentation since memory is allocated contiguously
+• Best for: scratch buffers, temporary allocations, arena allocators
+• Limitation: Cannot free memory until full reset`
+    },
+    2: {
+        label: 'Best Fit',
+        description: `Heap 2 (Best Fit Allocator):
+• Searches free list for smallest block that fits request
+• Minimizes wasted space within allocated blocks
+• O(n) allocation time where n = number of free blocks
+• Supports freeing but does NOT coalesce adjacent free blocks
+• Can lead to external fragmentation over time
+• Best for: workloads with predictable allocation sizes
+• Limitation: No coalescing means free blocks stay fragmented`
+    },
+    3: {
+        label: 'Thread Safe',
+        description: `Heap 3 (Thread-Safe Wrapper):
+• Wraps the system's standard malloc/free with mutex protection
+• Thread-safe for concurrent access from multiple threads
+• Performance depends on underlying system allocator
+• Inherits all properties of system malloc (usually optimized)
+• Best for: multi-threaded applications needing standard behavior
+• Limitation: Mutex overhead on every allocation/free`
+    },
+    4: {
+        label: 'Coalescing',
+        description: `Heap 4 (Coalescing Allocator):
+• First-fit allocation with adjacent block coalescing
+• Merges adjacent free blocks to reduce fragmentation
+• O(n) allocation, O(1) free with immediate coalescing
+• Better memory utilization than non-coalescing allocators
+• Maintains sorted free list for efficient merging
+• Best for: general purpose allocation with varied sizes
+• Advantage: Significantly reduces external fragmentation`
+    },
+    5: {
+        label: 'Multi-Region',
+        description: `Heap 5 (Multi-Region Allocator):
+• Manages multiple separate memory regions with different properties
+• Supports region-specific allocation via flags (FAST, DMA, UNCACHED)
+• Each region has independent free lists and statistics
+• Coalescing within each region, no cross-region merging
+• Can fall back to other regions if preferred region is full
+• Best for: embedded systems with heterogeneous memory types
+• Use cases: Cache-friendly hot data, DMA buffers, bulk storage`
+    }
+};
+
 const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
     const [selectedRegion, setSelectedRegion] = useState('all');
     const [displayStats, setDisplayStats] = useState(stats);
-    const [regionInfo, setRegionInfo] = useState({});
 
-    const externalFragTooltip = "External fragmentation: free memory broken into small, non-contiguous blocks.";
+    const externalFragTooltip = "External fragmentation: free memory scattered in small non-contiguous blocks.";
     const internalFragTooltip = "Internal fragmentation: wasted space within allocated blocks due to alignment.";
 
     useEffect(() => {
         if (currentHeap === 5 && heapModule) {
-            const regions = {};
-            const regionCount = heapModule.getRegionCount();
-            for (let i = 0; i < regionCount; i++) {
-                const info = heapModule.getRegionInfo(i);
-                if (info) regions[i] = info;
-            }
-            setRegionInfo(regions);
-            
             if (selectedRegion === 'all') {
                 setDisplayStats(stats);
             } else {
@@ -45,7 +93,6 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
             }
         } else {
             setDisplayStats(stats);
-            setRegionInfo({});
         }
     }, [selectedRegion, stats, currentHeap, heapModule]);
 
@@ -76,87 +123,41 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
     const showRegionSelector = currentHeap === 5;
     const showMinHistoric = currentHeap !== 1 && selectedRegion === 'all';
 
-    const StatBox = ({ icon, label, value, color, subValue }) => (
-        <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1,
-            p: 1,
-            borderRadius: 1,
-            background: 'rgba(0,0,0,0.02)',
-            minWidth: 100
-        }}>
-            {icon}
-            <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', display: 'block', lineHeight: 1.2 }}>
-                    {label}
-                </Typography>
-                <Typography variant="body2" fontWeight="bold" sx={{ color: color || 'text.primary', lineHeight: 1.2 }}>
-                    {value}
-                </Typography>
-                {subValue && (
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
-                        {subValue}
-                    </Typography>
-                )}
-            </Box>
-        </Box>
-    );
-
-    const ProgressStat = ({ label, value, percent, color, bgcolor }) => (
-        <Box sx={{ minWidth: 120 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="baseline">
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>{label}</Typography>
-                <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.7rem' }}>{value}</Typography>
-            </Box>
-            <LinearProgress
-                variant="determinate"
-                value={percent}
-                sx={{ 
-                    height: 4, 
-                    borderRadius: 2,
-                    backgroundColor: bgcolor,
-                    '& .MuiLinearProgress-bar': { backgroundColor: color, borderRadius: 2 }
-                }}
-            />
-        </Box>
-    );
-
-    const FragStat = ({ label, value, tooltip }) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Tooltip title={tooltip} placement="top" arrow>
-                <IconButton size="small" sx={{ p: 0 }}>
-                    <HelpIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
-                </IconButton>
-            </Tooltip>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>{label}:</Typography>
-            <Typography variant="body2" fontWeight="bold" sx={{ color: getFragColor(value), fontSize: '0.8rem' }}>
-                {value.toFixed(1)}%
-            </Typography>
-        </Box>
-    );
+    const heapInfo = HEAP_INFO[currentHeap] || { label: `Heap ${currentHeap}`, description: 'No description available.' };
 
     return (
         <Box sx={{ 
             display: 'flex', 
             flexWrap: 'wrap', 
-            gap: 2, 
+            gap: 1.5, 
             alignItems: 'center',
-            p: 1.5,
+            justifyContent: 'space-between',
+            p: 1,
             background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(249,250,251,0.95) 100%)',
             borderRadius: 2,
             border: '1px solid',
             borderColor: 'divider'
         }}>
+            {/* Heap Type Chip */}
+            <Tooltip title={<Box sx={{ whiteSpace: 'pre-line', maxWidth: 350, fontSize: '0.8rem' }}>{heapInfo.description}</Box>} placement="bottom" arrow>
+                <Chip
+                    label={heapInfo.label}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    sx={{ fontWeight: 'bold', cursor: 'help', fontSize: '0.7rem' }}
+                />
+            </Tooltip>
+
             {/* Region Selector for heap_5 */}
             {showRegionSelector && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <LayersIcon fontSize="small" sx={{ color: 'primary.main' }} />
-                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <LayersIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                    <FormControl size="small" sx={{ minWidth: 80 }}>
                         <Select
                             value={selectedRegion}
                             onChange={(e) => setSelectedRegion(e.target.value)}
-                            sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { py: 0.5 } }}
+                            sx={{ fontSize: '0.7rem', '& .MuiSelect-select': { py: 0.25, px: 1 } }}
                         >
                             <MenuItem value="all">All</MenuItem>
                             <MenuItem value={0}>FAST</MenuItem>
@@ -168,66 +169,41 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
             )}
 
             {/* Memory Usage */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <MemoryIcon fontSize="small" sx={{ color: 'primary.main' }} />
-                <ProgressStat 
-                    label="Allocated" 
-                    value={`${formatBytes(allocatedBytes)} (${allocatedPercent.toFixed(0)}%)`}
-                    percent={allocatedPercent}
-                    color="#ef4444"
-                    bgcolor="rgba(239,68,68,0.1)"
-                />
-                <ProgressStat 
-                    label="Free" 
-                    value={`${formatBytes(freeBytes)} (${freePercent.toFixed(0)}%)`}
-                    percent={freePercent}
-                    color="#10b981"
-                    bgcolor="rgba(16,185,129,0.1)"
-                />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 200, maxWidth: 350 }}>
+                <MemoryIcon sx={{ fontSize: 16, color: 'primary.main', flexShrink: 0 }} />
+                <Box sx={{ flex: 1 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="baseline">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>Allocated</Typography>
+                        <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.65rem' }}>{formatBytes(allocatedBytes)} ({allocatedPercent.toFixed(0)}%)</Typography>
+                    </Box>
+                    <LinearProgress variant="determinate" value={allocatedPercent}
+                        sx={{ height: 3, borderRadius: 1.5, backgroundColor: 'rgba(239,68,68,0.1)', '& .MuiLinearProgress-bar': { backgroundColor: '#ef4444', borderRadius: 1.5 } }} />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="baseline">
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>Free</Typography>
+                        <Typography variant="caption" fontWeight="bold" sx={{ fontSize: '0.65rem' }}>{formatBytes(freeBytes)} ({freePercent.toFixed(0)}%)</Typography>
+                    </Box>
+                    <LinearProgress variant="determinate" value={freePercent}
+                        sx={{ height: 3, borderRadius: 1.5, backgroundColor: 'rgba(16,185,129,0.1)', '& .MuiLinearProgress-bar': { backgroundColor: '#10b981', borderRadius: 1.5 } }} />
+                </Box>
             </Box>
 
             {/* Block Stats */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <StorageIcon fontSize="small" sx={{ color: 'primary.main' }} />
-                <Chip 
-                    label={`${allocationCount} alloc`} 
-                    size="small" 
-                    sx={{ 
-                        bgcolor: 'rgba(99,102,241,0.1)', 
-                        color: 'primary.main',
-                        fontWeight: 'bold',
-                        fontSize: '0.7rem'
-                    }} 
-                />
-                <Chip 
-                    label={`${freeBlockCount} free`} 
-                    size="small" 
-                    sx={{ 
-                        bgcolor: 'rgba(16,185,129,0.1)', 
-                        color: '#10b981',
-                        fontWeight: 'bold',
-                        fontSize: '0.7rem'
-                    }} 
-                />
-                <Chip 
-                    label={formatBytes(totalSize)} 
-                    size="small" 
-                    sx={{ 
-                        bgcolor: 'rgba(59,130,246,0.1)', 
-                        color: '#3b82f6',
-                        fontWeight: 'bold',
-                        fontSize: '0.7rem'
-                    }} 
-                />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <StorageIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                <Chip label={`${allocationCount} alloc`} size="small" sx={{ bgcolor: 'rgba(99,102,241,0.1)', color: 'primary.main', fontWeight: 'bold', fontSize: '0.6rem', height: 20 }} />
+                <Chip label={`${freeBlockCount} free`} size="small" sx={{ bgcolor: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 'bold', fontSize: '0.6rem', height: 20 }} />
+                <Chip label={formatBytes(totalSize)} size="small" sx={{ bgcolor: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontWeight: 'bold', fontSize: '0.6rem', height: 20 }} />
             </Box>
 
             {/* Additional Stats */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', whiteSpace: 'nowrap' }}>
                     Largest: <strong>{formatBytes(largestFreeBlock)}</strong>
                 </Typography>
                 {showMinHistoric && (
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', whiteSpace: 'nowrap' }}>
                         Min: <strong>{formatBytes(minFreeBytes)}</strong>
                     </Typography>
                 )}
@@ -235,19 +211,27 @@ const Statistics = ({ stats, currentHeap, blocks, heapModule }) => {
 
             {/* Fragmentation */}
             {showFragmentation && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 'auto' }}>
-                    <FragmentIcon fontSize="small" sx={{ color: 'primary.main' }} />
-                    <FragStat label="Ext" value={externalFragmentation} tooltip={externalFragTooltip} />
-                    <FragStat label="Int" value={internalFragmentation} tooltip={internalFragTooltip} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FragmentIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                        <Tooltip title={externalFragTooltip} placement="top" arrow>
+                            <IconButton size="small" sx={{ p: 0 }}><HelpIcon sx={{ fontSize: 10, color: 'text.secondary' }} /></IconButton>
+                        </Tooltip>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.55rem' }}>Ext:</Typography>
+                        <Typography variant="caption" fontWeight="bold" sx={{ color: getFragColor(externalFragmentation), fontSize: '0.7rem' }}>
+                            {externalFragmentation.toFixed(0)}%
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                        <Tooltip title={internalFragTooltip} placement="top" arrow>
+                            <IconButton size="small" sx={{ p: 0 }}><HelpIcon sx={{ fontSize: 10, color: 'text.secondary' }} /></IconButton>
+                        </Tooltip>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.55rem' }}>Int:</Typography>
+                        <Typography variant="caption" fontWeight="bold" sx={{ color: getFragColor(internalFragmentation), fontSize: '0.7rem' }}>
+                            {internalFragmentation.toFixed(0)}%
+                        </Typography>
+                    </Box>
                 </Box>
-            )}
-
-            {/* Heap Type Info */}
-            {currentHeap === 1 && (
-                <Chip label="Bump Allocator" size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 20 }} />
-            )}
-            {currentHeap === 3 && (
-                <Chip label="Thread-Safe" size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 20 }} />
             )}
         </Box>
     );

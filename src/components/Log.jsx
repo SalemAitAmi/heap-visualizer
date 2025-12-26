@@ -35,14 +35,13 @@ const Log = ({ logs, currentHeap }) => {
         }
         
         if (log.offset > 0) {
-            details.push(`Address: 0x${log.offset.toString(16).padStart(4, '0')}`);
+            details.push(`Addr: 0x${log.offset.toString(16).padStart(4, '0')}`);
         }
         
         if (log.allocationId > 0) {
             details.push(`ID: ${log.allocationId}`);
         }
         
-        // Add flags info for heap_5 malloc operations
         if (currentHeap === 5 && log.action === 'MALLOC' && log.flags) {
             const flagNames = [];
             if (log.flags & 0x01) flagNames.push('FAST');
@@ -57,21 +56,23 @@ const Log = ({ logs, currentHeap }) => {
     };
 
     return (
-        <Box height="100%" display="flex" flexDirection="column">
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <Box 
                 ref={listRef}
                 sx={{ 
-                    flex: 1, 
+                    flex: 1,
                     overflowY: 'auto',
+                    overflowX: 'hidden',
                     border: '1px solid',
                     borderColor: 'divider',
                     borderRadius: 1,
-                    bgcolor: 'rgba(0,0,0,0.02)'
+                    bgcolor: 'rgba(0,0,0,0.02)',
+                    minHeight: 0 // Important for flex scrolling
                 }}
             >
-                <List dense sx={{ py: 0 }}>
+                <List dense sx={{ py: 0, m: 0 }}>
                     {logs.length === 0 ? (
-                        <ListItem>
+                        <ListItem sx={{ py: 1 }}>
                             <Typography variant="body2" color="text.secondary">
                                 No operations yet...
                             </Typography>
@@ -84,33 +85,30 @@ const Log = ({ logs, currentHeap }) => {
                                     borderBottom: '1px solid',
                                     borderColor: 'divider',
                                     '&:last-child': { borderBottom: 'none' },
-                                    py: 0.75
+                                    py: 0.5,
+                                    px: 1,
+                                    minHeight: 36
                                 }}
                             >
                                 <Box width="100%">
-                                    <Box display="flex" alignItems="center" gap={0.75} mb={0.25} flexWrap="wrap">
+                                    <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
                                         <Chip
                                             label={log.action}
                                             size="small"
                                             color={getActionColor(log.action)}
-                                            sx={{ height: '22px', fontSize: '0.7rem' }}
+                                            sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                         />
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                                             #{log.timestamp}
                                         </Typography>
                                         
-                                        {/* Show region for heap_5 */}
                                         {currentHeap === 5 && log.regionName && (
                                             <Chip
                                                 label={log.regionName}
                                                 size="small"
                                                 color={getRegionColor(log.regionId)}
                                                 variant="outlined"
-                                                sx={{ 
-                                                    height: '18px',
-                                                    fontSize: '0.65rem',
-                                                    fontWeight: 'bold'
-                                                }}
+                                                sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.5 } }}
                                             />
                                         )}
                                         
@@ -119,15 +117,16 @@ const Log = ({ logs, currentHeap }) => {
                                                 label="FAILED"
                                                 size="small"
                                                 color="error"
-                                                sx={{ height: '20px', fontSize: '0.65rem' }}
+                                                sx={{ height: 16, fontSize: '0.6rem' }}
                                             />
                                         )}
+                                        
+                                        {formatLogEntry(log) && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', ml: 0.5 }}>
+                                                {formatLogEntry(log)}
+                                            </Typography>
+                                        )}
                                     </Box>
-                                    {formatLogEntry(log) && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                            {formatLogEntry(log)}
-                                        </Typography>
-                                    )}
                                 </Box>
                             </ListItem>
                         ))
@@ -135,9 +134,9 @@ const Log = ({ logs, currentHeap }) => {
                 </List>
             </Box>
             
-            <Box mt={1} display="flex" justifyContent="flex-start" alignItems="center">
-                <Typography variant="caption" color="text.secondary">
-                    {logs.length} operations logged
+            <Box sx={{ pt: 0.5, flexShrink: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                    {logs.length} operations
                 </Typography>
             </Box>
         </Box>
