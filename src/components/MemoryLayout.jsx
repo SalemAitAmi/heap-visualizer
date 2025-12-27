@@ -225,6 +225,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
     const zoomRefs = useRef({});
     const transformRefs = useRef({});
     const lastZoomLevelRef = useRef({});
+    const lastDimensionsRef = useRef({});
 
     const regionNames = ['FAST', 'DMA', 'UNCACHED'];
     const totalRegionHeight = dimensions.height - 30;
@@ -314,14 +315,13 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
         let regionBlocks = blocksByRegion[regionId] || [];
         const svg = d3.select(svgRefs.current[regionId]);
         const currentTransform = transformRefs.current[regionId];
-        const isInitialDraw = !currentTransform || currentTransform.k === 1;
         
         svg.selectAll('*').remove();
 
         const { width } = dimensions;
         const margin = { top: 12, right: 15, bottom: 40, left: 45 };
         const innerWidth = width - margin.left - margin.right;
-        const innerHeight = regionHeight - margin.top - margin.bottom - borderWidth * 2;
+        const innerHeight = regionHeight - margin.top - margin.bottom;
 
         // Default region sizes for heap 5 when no blocks are present
         const defaultRegionSizes = { 0: 20480, 1: 28672, 2: 32768 };
@@ -344,11 +344,40 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
 
         const xScale = d3.scaleLinear().domain([0, totalSize]).range([0, innerWidth]);
 
+        // Clip path for blocks - exactly matches the inner area
         svg.append('defs').append('clipPath').attr('id', `clip-region-${regionId}`)
             .append('rect').attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
 
         const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);
 
+        // Check if we need to reset zoom due to dimension change
+        // If dimensions changed significantly, reset the transform to avoid offset issues
+        const prevWidth = lastDimensionsRef.current[regionId]?.width;
+        const dimensionsChanged = prevWidth && Math.abs(prevWidth - width) > 1;
+        lastDimensionsRef.current[regionId] = { width };
+        
+        if (dimensionsChanged && currentTransform && currentTransform.k > 1) {
+            console.log(`Region ${regionId}: Dimensions changed (${prevWidth} -> ${width}), resetting zoom from ${currentTransform.k.toFixed(2)}`);
+            transformRefs.current[regionId] = d3.zoomIdentity;
+            lastZoomLevelRef.current[regionId] = 1;
+        }
+        
+        const activeTransform = transformRefs.current[regionId];
+        const isInitialDraw = !activeTransform || activeTransform.k === 1;
+
+        // Inset for blocks from boundary
+        const blockInset = borderWidth * 0.5;
+        
+        // Helper to get current scale (accounts for zoom transform)
+        const getCurrentScale = () => {
+            const t = transformRefs.current[regionId] || d3.zoomIdentity;
+            const rescaled = t.rescaleX(xScale);
+            let [d0, d1] = rescaled.domain();
+            if (d0 < 0) { d1 -= d0; d0 = 0; }
+            if (d1 > totalSize) { d0 = Math.max(0, d0 - (d1 - totalSize)); d1 = totalSize; }
+            return d3.scaleLinear().domain([d0, d1]).range([0, innerWidth]);
+        };
+        
         const zoom = d3.zoom()
             .scaleExtent([1, 50])
             .on('zoom', (event) => {
@@ -373,6 +402,7 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                 g.selectAll('.block-rect').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
                 g.selectAll('.block-text').attr('x', d => clampedScale(d.offset) + (clampedScale(d.offset + d.size) - clampedScale(d.offset)) / 2).style('display', d => (clampedScale(d.offset + d.size) - clampedScale(d.offset)) > 30 ? 'block' : 'none');
                 g.selectAll('.block-selection-overlay').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
+                g.selectAll('.hover-overlay').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
                 updateAxis(g, clampedScale, totalSize, regionBlocks, innerHeight, transform.k);
             });
 
@@ -407,35 +437,32 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
             });
         
         zoomRefs.current[regionId] = zoom;
-        if (currentTransform && !isInitialDraw) svg.call(zoom.transform, currentTransform);
+        if (activeTransform && !isInitialDraw) svg.call(zoom.transform, activeTransform);
         else { transformRefs.current[regionId] = d3.zoomIdentity; lastZoomLevelRef.current[regionId] = 1; }
 
         const regionColor = REGION_COLORS[regionId] || REGION_COLORS[0];
+        const currentXScale = (activeTransform && !isInitialDraw) ? activeTransform.rescaleX(xScale) : xScale;
+        const currentZoomLevel = (activeTransform && !isInitialDraw) ? activeTransform.k : 1;
         
-        // Draw boundary first (background)
-        g.append('rect').attr('class', 'heap-boundary')
-            .attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight)
-            .attr('fill', regionColor.bg).attr('stroke', regionColor.border).attr('stroke-width', borderWidth);
+        // 1. Draw background fill first
+        g.append('rect').attr('class', 'heap-background')
+            .attr('x', 0).attr('y', 0)
+            .attr('width', innerWidth).attr('height', innerHeight)
+            .attr('fill', regionColor.bg);
 
-        const currentXScale = (currentTransform && !isInitialDraw) ? currentTransform.rescaleX(xScale) : xScale;
-        const currentZoomLevel = (currentTransform && !isInitialDraw) ? currentTransform.k : 1;
-
-        // Draw blocks on top
+        // 2. Draw blocks with inset (clipped)
         if (regionBlocks.length > 0) {
             const blockGroup = g.append('g').attr('clip-path', `url(#clip-region-${regionId})`);
             const sortedBlocks = [...regionBlocks].sort((a, b) => a.offset - b.offset);
 
             const blockGroups = blockGroup.selectAll('.block').data(sortedBlocks).enter().append('g').attr('class', 'block');
 
-            // Inset blocks slightly to not cover the border
-            const blockInset = borderWidth;
-            
             blockGroups.append('rect')
                 .attr('class', 'block-rect')
                 .attr('x', d => currentXScale(d.offset))
                 .attr('y', blockInset)
                 .attr('width', d => Math.max(1, currentXScale(d.offset + d.size) - currentXScale(d.offset)))
-                .attr('height', innerHeight - blockInset)
+                .attr('height', innerHeight - blockInset * 2)
                 .attr('fill', d => BLOCK_STATES[d.state]?.color || '#999')
                 .attr('opacity', d => d.state === 0 ? 0.5 : 1.0)
                 .attr('stroke', 'rgba(255,255,255,0.3)')
@@ -444,28 +471,29 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                 .on('mouseenter', function(event, d) {
                     showHoverTooltip(event, d);
                     if (!(selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId)) {
-                        d3.select(this).attr('stroke', '#000').attr('stroke-width', 2);
+                        // Show hover overlay (unclipped, drawn on top)
+                        // Use getCurrentScale() to get the live scale accounting for zoom
+                        g.select('.hover-overlay').remove();
+                        const liveScale = getCurrentScale();
+                        const x = liveScale(d.offset);
+                        const w = Math.max(1, liveScale(d.offset + d.size) - liveScale(d.offset));
+                        g.append('rect')
+                            .datum(d) // Store data for zoom updates
+                            .attr('class', 'hover-overlay')
+                            .attr('x', x).attr('y', blockInset)
+                            .attr('width', w).attr('height', innerHeight - blockInset * 2)
+                            .attr('fill', 'none')
+                            .attr('stroke', '#000')
+                            .attr('stroke-width', 2)
+                            .style('pointer-events', 'none');
                     }
                 })
                 .on('mousemove', function(event) { if (hoverTooltipRef.current) hoverTooltipRef.current.style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px'); })
-                .on('mouseleave', function(event, d) {
+                .on('mouseleave', function() {
                     hideHoverTooltip();
-                    if (!(selectedBlock && selectedBlock.offset === d.offset && selectedBlock.regionId === d.regionId)) {
-                        d3.select(this).attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1);
-                    }
+                    g.select('.hover-overlay').remove();
                 })
                 .on('click', function(event, d) { event.stopPropagation(); onBlockClick(d); showPersistentTooltip(event, d); });
-
-            if (selectedBlock) {
-                const sbd = sortedBlocks.find(b => b.offset === selectedBlock.offset && b.regionId === selectedBlock.regionId);
-                if (sbd) {
-                    blockGroup.append('rect').datum(sbd).attr('class', 'block-selection-overlay')
-                        .attr('x', currentXScale(sbd.offset)).attr('y', blockInset)
-                        .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
-                        .attr('height', innerHeight - blockInset)
-                        .attr('fill', 'none').attr('stroke', '#000').attr('stroke-width', 3).style('pointer-events', 'none');
-                }
-            }
 
             blockGroups.append('text').attr('class', 'block-text')
                 .attr('x', d => currentXScale(d.offset) + (currentXScale(d.offset + d.size) - currentXScale(d.offset)) / 2)
@@ -474,6 +502,31 @@ const Heap5Layout = ({ blocksByRegion, regionIds, dimensions, selectedBlock, onB
                 .style('pointer-events', 'none').style('text-shadow', '1px 1px 2px rgba(0,0,0,0.8)')
                 .style('display', d => (currentXScale(d.offset + d.size) - currentXScale(d.offset)) > 30 ? 'block' : 'none')
                 .text(d => { if (d.state === 1 && d.allocationId > 0) return `#${d.allocationId}`; if (d.state === 0 && d.size > 500) return 'FREE'; if (d.state === 2) return 'FREED'; return ''; });
+        }
+
+        // 3. Draw boundary stroke on TOP of blocks (not filled, just stroke)
+        g.append('rect').attr('class', 'heap-boundary')
+            .attr('x', 0).attr('y', 0)
+            .attr('width', innerWidth).attr('height', innerHeight)
+            .attr('fill', 'none')
+            .attr('stroke', regionColor.border)
+            .attr('stroke-width', borderWidth);
+
+        // 4. Draw selection overlay (unclipped, on top of everything)
+        if (selectedBlock && regionBlocks.length > 0) {
+            const sbd = regionBlocks.find(b => b.offset === selectedBlock.offset && b.regionId === selectedBlock.regionId);
+            if (sbd) {
+                g.append('rect').attr('class', 'block-selection-overlay')
+                    .datum(sbd)
+                    .attr('x', currentXScale(sbd.offset))
+                    .attr('y', blockInset)
+                    .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
+                    .attr('height', innerHeight - blockInset * 2)
+                    .attr('fill', 'none')
+                    .attr('stroke', '#000')
+                    .attr('stroke-width', 3)
+                    .style('pointer-events', 'none');
+            }
         }
 
         updateAxis(g, currentXScale, totalSize, regionBlocks, innerHeight, currentZoomLevel);
@@ -546,6 +599,7 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
     const zoomRef = useRef(null);
     const transformRef = useRef(d3.zoomIdentity);
     const lastZoomLevelRef = useRef(1);
+    const lastDimensionsRef = useRef({ width: 0 });
     const borderWidth = 2;
 
     useEffect(() => {
@@ -663,21 +717,48 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
 
         const svg = d3.select(svgRef.current);
         const ct = transformRef.current;
-        const isInitialDraw = !ct || ct.k === 1;
         
         svg.selectAll('*').remove();
 
         const { width, height } = dimensions;
         const margin = { top: 12, right: 15, bottom: 45, left: 45 };
         const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom - borderWidth * 2;
+        const innerHeight = height - margin.top - margin.bottom;
 
         const xScale = d3.scaleLinear().domain([0, totalSize]).range([0, innerWidth]);
 
+        // Check if dimensions changed significantly - reset zoom to avoid offset issues
+        const prevWidth = lastDimensionsRef.current.width;
+        const dimensionsChanged = prevWidth && Math.abs(prevWidth - width) > 1;
+        lastDimensionsRef.current = { width };
+        
+        if (dimensionsChanged && ct && ct.k > 1) {
+            console.log(`SingleHeap: Dimensions changed (${prevWidth} -> ${width}), resetting zoom from ${ct.k.toFixed(2)}`);
+            transformRef.current = d3.zoomIdentity;
+            lastZoomLevelRef.current = 1;
+        }
+        
+        const activeTransform = transformRef.current;
+        const isInitialDraw = !activeTransform || activeTransform.k === 1;
+
+        // Clip path for blocks
         svg.append('defs').append('clipPath').attr('id', 'clip-main')
             .append('rect').attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
 
         const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+        // Inset for blocks from boundary
+        const blockInset = borderWidth * 0.5;
+        
+        // Helper to get current scale (accounts for zoom transform)
+        const getCurrentScale = () => {
+            const t = transformRef.current || d3.zoomIdentity;
+            const rescaled = t.rescaleX(xScale);
+            let [d0, d1] = rescaled.domain();
+            if (d0 < 0) { d1 -= d0; d0 = 0; }
+            if (d1 > totalSize) { d0 = Math.max(0, d0 - (d1 - totalSize)); d1 = totalSize; }
+            return d3.scaleLinear().domain([d0, d1]).range([0, innerWidth]);
+        };
 
         const zoom = d3.zoom()
             .scaleExtent([1, 50])
@@ -699,6 +780,7 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 g.selectAll('.block-rect').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
                 g.selectAll('.block-text').attr('x', d => clampedScale(d.offset) + (clampedScale(d.offset + d.size) - clampedScale(d.offset)) / 2).style('display', d => (clampedScale(d.offset + d.size) - clampedScale(d.offset)) > 30 ? 'block' : 'none');
                 g.selectAll('.block-selection-overlay').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
+                g.selectAll('.hover-overlay').attr('x', d => clampedScale(d.offset)).attr('width', d => Math.max(1, clampedScale(d.offset + d.size) - clampedScale(d.offset)));
                 updateAxis(g, clampedScale, totalSize, blocks, innerHeight, transform.k);
             });
 
@@ -728,30 +810,30 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
             });
         
         zoomRef.current = zoom;
-        if (ct && !isInitialDraw) svg.call(zoom.transform, ct);
+        if (activeTransform && !isInitialDraw) svg.call(zoom.transform, activeTransform);
         else { transformRef.current = d3.zoomIdentity; lastZoomLevelRef.current = 1; }
 
-        // Draw boundary first
-        g.append('rect').attr('class', 'heap-boundary')
-            .attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight)
-            .attr('fill', 'none').attr('stroke', '#333').attr('stroke-width', borderWidth);
+        const currentXScale = (activeTransform && !isInitialDraw) ? activeTransform.rescaleX(xScale) : xScale;
+        const currentZoomLevel = (activeTransform && !isInitialDraw) ? activeTransform.k : 1;
 
-        const currentXScale = (ct && !isInitialDraw) ? ct.rescaleX(xScale) : xScale;
-        const currentZoomLevel = (ct && !isInitialDraw) ? ct.k : 1;
+        // 1. Draw background (the area inside the boundary)
+        g.append('rect').attr('class', 'heap-background')
+            .attr('x', 0).attr('y', 0)
+            .attr('width', innerWidth).attr('height', innerHeight)
+            .attr('fill', 'rgba(245,245,245,0.5)');
 
+        // 2. Draw blocks with inset (clipped)
         if (blocks && blocks.length > 0) {
             const blockGroup = g.append('g').attr('clip-path', 'url(#clip-main)');
             const sortedBlocks = [...blocks].sort((a, b) => a.offset - b.offset);
             const blockGroups = blockGroup.selectAll('.block').data(sortedBlocks).enter().append('g').attr('class', 'block');
-            
-            const blockInset = borderWidth;
 
             blockGroups.append('rect')
                 .attr('class', 'block-rect')
                 .attr('x', d => currentXScale(d.offset))
                 .attr('y', blockInset)
                 .attr('width', d => Math.max(1, currentXScale(d.offset + d.size) - currentXScale(d.offset)))
-                .attr('height', innerHeight - blockInset)
+                .attr('height', innerHeight - blockInset * 2)
                 .attr('fill', d => BLOCK_STATES[d.state]?.color || '#999')
                 .attr('opacity', d => d.state === 0 ? 0.5 : 1.0)
                 .attr('stroke', 'rgba(255,255,255,0.3)')
@@ -759,25 +841,30 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 .style('cursor', 'pointer')
                 .on('mouseenter', function(event, d) {
                     showHoverTooltip(event, d);
-                    if (!(selectedBlock && selectedBlock.offset === d.offset)) d3.select(this).attr('stroke', '#000').attr('stroke-width', 2);
+                    if (!(selectedBlock && selectedBlock.offset === d.offset)) {
+                        // Show hover overlay (unclipped, drawn on top)
+                        // Use getCurrentScale() to get the live scale accounting for zoom
+                        g.select('.hover-overlay').remove();
+                        const liveScale = getCurrentScale();
+                        const x = liveScale(d.offset);
+                        const w = Math.max(1, liveScale(d.offset + d.size) - liveScale(d.offset));
+                        g.append('rect')
+                            .datum(d) // Store data for zoom updates
+                            .attr('class', 'hover-overlay')
+                            .attr('x', x).attr('y', blockInset)
+                            .attr('width', w).attr('height', innerHeight - blockInset * 2)
+                            .attr('fill', 'none')
+                            .attr('stroke', '#000')
+                            .attr('stroke-width', 2)
+                            .style('pointer-events', 'none');
+                    }
                 })
                 .on('mousemove', function(event) { if (hoverTooltipRef.current) hoverTooltipRef.current.style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px'); })
-                .on('mouseleave', function(event, d) {
+                .on('mouseleave', function() {
                     hideHoverTooltip();
-                    if (!(selectedBlock && selectedBlock.offset === d.offset)) d3.select(this).attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1);
+                    g.select('.hover-overlay').remove();
                 })
                 .on('click', function(event, d) { event.stopPropagation(); onBlockClick(d); showPersistentTooltip(event, d); });
-
-            if (selectedBlock) {
-                const sbd = sortedBlocks.find(b => b.offset === selectedBlock.offset);
-                if (sbd) {
-                    blockGroup.append('rect').datum(sbd).attr('class', 'block-selection-overlay')
-                        .attr('x', currentXScale(sbd.offset)).attr('y', blockInset)
-                        .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
-                        .attr('height', innerHeight - blockInset)
-                        .attr('fill', 'none').attr('stroke', '#000').attr('stroke-width', 3).style('pointer-events', 'none');
-                }
-            }
 
             blockGroups.append('text').attr('class', 'block-text')
                 .attr('x', d => currentXScale(d.offset) + (currentXScale(d.offset + d.size) - currentXScale(d.offset)) / 2)
@@ -786,6 +873,31 @@ const SingleHeapLayout = ({ blocks, totalSize, heapOffset, dimensions, selectedB
                 .style('pointer-events', 'none').style('text-shadow', '1px 1px 2px rgba(0,0,0,0.8)')
                 .style('display', d => (currentXScale(d.offset + d.size) - currentXScale(d.offset)) > 30 ? 'block' : 'none')
                 .text(d => { if (d.state === 1 && d.allocationId > 0) return `#${d.allocationId}`; if (d.state === 0 && d.size > 1000) return 'FREE'; if (d.state === 2) return 'FREED'; return ''; });
+        }
+
+        // 3. Draw boundary stroke on TOP of blocks
+        g.append('rect').attr('class', 'heap-boundary')
+            .attr('x', 0).attr('y', 0)
+            .attr('width', innerWidth).attr('height', innerHeight)
+            .attr('fill', 'none')
+            .attr('stroke', '#333')
+            .attr('stroke-width', borderWidth);
+
+        // 4. Draw selection overlay (unclipped, on top of everything)
+        if (selectedBlock && blocks && blocks.length > 0) {
+            const sbd = blocks.find(b => b.offset === selectedBlock.offset);
+            if (sbd) {
+                g.append('rect').attr('class', 'block-selection-overlay')
+                    .datum(sbd)
+                    .attr('x', currentXScale(sbd.offset))
+                    .attr('y', blockInset)
+                    .attr('width', Math.max(1, currentXScale(sbd.offset + sbd.size) - currentXScale(sbd.offset)))
+                    .attr('height', innerHeight - blockInset * 2)
+                    .attr('fill', 'none')
+                    .attr('stroke', '#000')
+                    .attr('stroke-width', 3)
+                    .style('pointer-events', 'none');
+            }
         }
 
         updateAxis(g, currentXScale, totalSize, blocks, innerHeight, currentZoomLevel);
